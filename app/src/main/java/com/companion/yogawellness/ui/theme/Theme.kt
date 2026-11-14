@@ -59,12 +59,35 @@ data class ClinicalColors(
     val cardBorder: Color,
     val inkMuted: Color,
     val glass: Color,
-    val glassBorder: Color
+    val glassBorder: Color,
+    /** Tonal card surface: a barely-there top-to-bottom gradient gives panels depth. */
+    val cardTop: Color = Color.White,
+    val cardBottom: Color = Color(0xFFF8FAFD),
+    /** Light caught on the top edge of a card. */
+    val cardEdge: Color = Color(0xFFE1E8F0),
+    /** Inset "well" inside a card (week strip, sub-panels). */
+    val well: Color = Color(0xFFF1F5F9),
+    val wellBorder: Color = Color(0xFFE3E9F0),
+    /** Illustration stage: the deep-navy panel every biomechanical figure stands on. */
+    val stageTop: Color = Color(0xFF0C2A47),
+    val stageBottom: Color = Color(0xFF061425),
+    val stageGlow: Color = Color(0xFF2DD4BF),
+    val shadow: Color = Color(0xFF071A2F),
+    val isDark: Boolean = false
 ) {
     val heroBrush: Brush
         get() = Brush.linearGradient(listOf(heroStart, heroMid, heroEnd))
     val ctaBrush: Brush
-        get() = Brush.horizontalGradient(listOf(Brand.Teal600, Brand.Teal500))
+        get() = Brush.horizontalGradient(listOf(Brand.Teal600, Color(0xFF10969C), Brand.Teal500))
+    val cardBrush: Brush
+        get() = Brush.verticalGradient(listOf(cardTop, cardBottom))
+    val cardEdgeBrush: Brush
+        get() = Brush.verticalGradient(listOf(cardEdge, cardBorder))
+    val stageBrush: Brush
+        get() = Brush.verticalGradient(listOf(stageTop, stageBottom))
+    /** Panels that carry the brand gradient (practice launcher, history summary). */
+    val featureBrush: Brush
+        get() = Brush.linearGradient(listOf(heroStart, heroMid, Brand.Teal700))
 }
 
 private val LightClinical = ClinicalColors(
@@ -91,8 +114,17 @@ private val DarkClinical = LightClinical.copy(
     danger = Color(0xFFF97066),
     info = Color(0xFF60A5FA),
     hairline = Color(0xFF1C2B40),
-    cardBorder = Color(0xFF1E2E44),
-    inkMuted = Color(0xFF94A3B8)
+    cardBorder = Color(0xFF18273B),
+    inkMuted = Color(0xFF94A3B8),
+    cardTop = Color(0xFF111F33),
+    cardBottom = Color(0xFF0B1727),
+    cardEdge = Color(0xFF2A4059),
+    well = Color(0xFF081220),
+    wellBorder = Color(0xFF15243A),
+    stageTop = Color(0xFF0B2640),
+    stageBottom = Color(0xFF050F1E),
+    shadow = Color(0xFF000000),
+    isDark = true
 )
 
 private val LocalClinicalColors = staticCompositionLocalOf { LightClinical }
@@ -138,7 +170,7 @@ private val DarkColors = darkColorScheme(
     onSecondaryContainer = Color(0xFFDCE8F7),
     tertiary = Color(0xFFB4A2FF),
     onTertiary = Color(0xFF26145E),
-    background = Color(0xFF060E1A),
+    background = Color(0xFF050C17),
     onBackground = Color(0xFFE6EDF5),
     surface = Color(0xFF0C1828),
     onSurface = Color(0xFFE6EDF5),

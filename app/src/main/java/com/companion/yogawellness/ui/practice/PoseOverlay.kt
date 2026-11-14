@@ -97,7 +97,10 @@ fun PoseOverlay(output: PipelineOutput?, mirror: Boolean, modifier: Modifier = M
             val la = frame[a]
             val lb = frame[b]
             if (la.visibility < 0.4f || lb.visibility < 0.4f) continue
-            drawLine(BoneGlow, tf.map(la), tf.map(lb), strokeWidth = glowW, cap = StrokeCap.Round)
+            val pa = tf.map(la)
+            val pb = tf.map(lb)
+            drawLine(BoneHalo, pa, pb, strokeWidth = glowW * 2f, cap = StrokeCap.Round)
+            drawLine(BoneGlow, pa, pb, strokeWidth = glowW, cap = StrokeCap.Round)
         }
         for ((a, b) in PoseLandmarkIndex.SKELETON_EDGES) {
             val la = frame[a]
@@ -113,7 +116,13 @@ fun PoseOverlay(output: PipelineOutput?, mirror: Boolean, modifier: Modifier = M
             val c = jointColor[i]?.let { scoreColor(it) } ?: ScoreColors.Neutral
             if (jointColor[i] != null) drawCircle(c.copy(alpha = 0.30f), radius = 11.dp.toPx(), center = p)
             drawCircle(Color.White, radius = 6.dp.toPx(), center = p)
-            drawCircle(c, radius = 4.5.dp.toPx(), center = p)
+            // Scored joints are filled with their band colour; the rest are open ring markers,
+            // the same keypoint the pose illustrations use.
+            if (jointColor[i] != null) drawCircle(c, radius = 4.5.dp.toPx(), center = p)
+            else {
+                drawCircle(JointCore, radius = 4.4.dp.toPx(), center = p)
+                drawCircle(BoneMint, radius = 1.8.dp.toPx(), center = p)
+            }
         }
 
         if (frontSide == null) return@Canvas
@@ -145,6 +154,9 @@ private fun vertexIndices(g: JointGeometry, frontSide: com.companion.yogawellnes
 }
 
 private val BoneGlow = Color(0x4022D3EE)
+private val BoneHalo = Color(0x145EEAD4)
+private val BoneMint = Color(0xFF5EEAD4)
+private val JointCore = Color(0xFF06182B)
 private val BoneCore = Color(0xE6E0FBFF)
 
 private fun DrawScope.drawAngleTag(tm: TextMeasurer, at: Offset, text: String, color: Color) {

@@ -1,5 +1,7 @@
 package com.companion.yogawellness.ui.codex
 
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -55,9 +57,14 @@ import kotlin.math.sqrt
 /** Colours of the demo figure (§5.4). */
 object DemoColors {
     val Background = Color(0xFF071A2F)    // brand navy
+    val Stage = Color(0xFF050F1E)         // foot of the illustration stage
     val PeakBone = Color(0xFF5EEAD4)      // brand mint: at the peak / hold
     val MovingBone = Color(0xFF38BDF8)    // cyan: entering or leaving the pose
     val Joint = Color(0xFFE2E8F0)
+    val JointCore = Color(0xFF06182B)
+    val PeakHalo = Color(0x265EEAD4)
+    val MovingHalo = Color(0x2638BDF8)
+    val Core = Color(0x73FFFFFF)
     val Floor = Color(0xFF2B4A6B)
     val Plumb = Color(0x80E2E8F0)
     val Arc = Color(0xFFFBBF24)
@@ -317,20 +324,35 @@ fun DrawScope.drawDemoFrame(f: DemoFrame, style: DemoStyle?, labels: List<TextLa
             strokeWidth = max(1f, scale * 0.015f), pathEffect = style.plumbEffect
         )
     }
+    // Halo first, so near bones are never dimmed by a far bone's glow.
+    val halo = if (f.atPeak) DemoColors.PeakHalo else DemoColors.MovingHalo
     for (k in f.boneOrder.indices) {
         val b = BONES[f.boneOrder[k]]
         val ia = b.a.ordinal; val ib = b.b.ordinal
         drawLine(
-            if (f.boneFar[f.boneOrder[k]]) bone.copy(alpha = 0.55f) else bone,
+            halo,
             Offset(cx + f.x[ia] * scale, floorY - f.y[ia] * scale),
             Offset(cx + f.x[ib] * scale, floorY - f.y[ib] * scale),
-            strokeWidth = boneW, cap = StrokeCap.Round
+            strokeWidth = boneW * 2.6f, cap = StrokeCap.Round
         )
     }
-    val jointR = boneW * 0.62f
+    for (k in f.boneOrder.indices) {
+        val b = BONES[f.boneOrder[k]]
+        val ia = b.a.ordinal; val ib = b.b.ordinal
+        val far = f.boneFar[f.boneOrder[k]]
+        val p0 = Offset(cx + f.x[ia] * scale, floorY - f.y[ia] * scale)
+        val p1 = Offset(cx + f.x[ib] * scale, floorY - f.y[ib] * scale)
+        drawLine(if (far) bone.copy(alpha = 0.55f) else bone, p0, p1, strokeWidth = boneW, cap = StrokeCap.Round)
+        // Bright core on the near side: the bone reads as lit rather than flat.
+        if (!far) drawLine(DemoColors.Core, p0, p1, strokeWidth = boneW * 0.24f, cap = StrokeCap.Round)
+    }
+    // Ring-shaped joint markers, matching the pose glyphs and the live overlay.
+    val jointR = boneW * 0.78f
     for (j in 0 until JOINTS) {
         if (j == HEAD) continue
-        drawCircle(DemoColors.Joint, jointR, Offset(cx + f.x[j] * scale, floorY - f.y[j] * scale))
+        val c = Offset(cx + f.x[j] * scale, floorY - f.y[j] * scale)
+        drawCircle(DemoColors.Joint, jointR, c)
+        drawCircle(DemoColors.JointCore, jointR * 0.52f, c)
     }
     // Head: a ring drawn as two discs (no Stroke object needed). The rig's ground contact is
     // joint-based, so a head resting on the floor (puppy, child's pose, lying poses) would be half
@@ -470,12 +492,23 @@ fun SkeletonDemoCanvas(
         modifier
             .aspectRatio(4f / 5f)
             .clip(RoundedCornerShape(22.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xFF0B2A4A), DemoColors.Background)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF0B2640), DemoColors.Stage)))
+            .drawBehind { drawStageLight() }
             .semantics { contentDescription = description }
     ) {
         if (version < 0) return@Canvas // draw-phase read: redraw on every solved frame
         drawDemoFrame(frame, style, if (showAngles) labels else null, showPlumb = true)
     }
+}
+
+/** The pool of teal light every demo figure stands in (lower-centre, where the body is). */
+private fun DrawScope.drawStageLight() {
+    val centre = Offset(size.width / 2f, size.height * 0.62f)
+    val r = size.maxDimension * 0.62f
+    drawCircle(
+        Brush.radialGradient(0f to Color(0x522DD4BF), 0.5f to Color(0x122DD4BF), 1f to Color.Transparent, center = centre, radius = r),
+        r, centre
+    )
 }
 
 /** Static peak-pose figure for list rows and the contact sheet. */
@@ -486,6 +519,8 @@ fun SkeletonThumbnail(item: AsanaCodexItem, view: CodexView, modifier: Modifier 
         modifier
             .aspectRatio(4f / 5f)
             .clip(RoundedCornerShape(14.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xFF0B2A4A), DemoColors.Background)))
+            .border(1.dp, Brush.verticalGradient(listOf(Color(0x29FFFFFF), Color(0x08FFFFFF))), RoundedCornerShape(14.dp))
+            .background(Brush.verticalGradient(listOf(Color(0xFF0B2640), DemoColors.Stage)))
+            .drawBehind { drawStageLight() }
     ) { drawDemoFrame(frame, null, null, showPlumb = false) }
 }

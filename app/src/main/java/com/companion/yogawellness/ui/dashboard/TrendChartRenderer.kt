@@ -1,5 +1,7 @@
 package com.companion.yogawellness.ui.dashboard
 
+import android.graphics.Shader
+import android.graphics.LinearGradient
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
@@ -30,8 +32,8 @@ data class ChartColors(
             quality = 0xFF2A78D6.toInt(), stress = 0xFFEB6834.toInt(), mood = 0xFF1BAF7A.toInt()
         )
         val Dark = ChartColors(
-            surface = 0xFF0C1828.toInt(), inkPrimary = 0xFFE6EDF5.toInt(), inkSecondary = 0xFFA9B7C9.toInt(),
-            muted = 0xFF7D8CA3.toInt(), grid = 0xFF1A2A40.toInt(), axis = 0xFF2B3D57.toInt(),
+            surface = 0xFF0D1A2C.toInt(), inkPrimary = 0xFFE6EDF5.toInt(), inkSecondary = 0xFFA9B7C9.toInt(),
+            muted = 0xFF7D8CA3.toInt(), grid = 0xFF182840.toInt(), axis = 0xFF2B3D57.toInt(),
             quality = 0xFF3987E5.toInt(), stress = 0xFFD95926.toInt(), mood = 0xFF199E70.toInt()
         )
     }
@@ -47,7 +49,13 @@ data class ChartColors(
  * Drawn on a plain [Canvas] so the app (Compose nativeCanvas) and the PDF report share one renderer.
  * @param dp pixels per dp, @param sp pixels per sp (use ~0.8 for PDF points)
  */
-class TrendChartRenderer(private val c: ChartColors, private val dp: Float, private val sp: Float) {
+class TrendChartRenderer(
+    private val c: ChartColors,
+    private val dp: Float,
+    private val sp: Float,
+    /** On-screen polish: a soft halo under each line and a fading fill under a lone series. Off for the PDF. */
+    private val luminous: Boolean = false
+) {
 
     private val leftPad = 30 * dp
     private val rightPad = 40 * dp
@@ -66,6 +74,10 @@ class TrendChartRenderer(private val c: ChartColors, private val dp: Float, priv
         style = Paint.Style.STROKE; strokeWidth = 2 * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
     }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 7 * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+    }
+    private val areaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val selPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = c.inkSecondary; strokeWidth = max(1f, dp); alpha = 140 }
 
     private class Series(val name: String, val color: Int, val values: List<Double?>)
@@ -160,10 +172,29 @@ class TrendChartRenderer(private val c: ChartColors, private val dp: Float, priv
             linePaint.color = s.color
             val path = Path()
             var penDown = false
+            var runStart = 0
+            fun fillRun(end: Int) {
+                // Only a lone series gets a fill: two overlapping fills would muddy the comparison.
+                if (!luminous || series.size != 1 || end <= runStart) return
+                val area = Path()
+                area.moveTo(x(runStart), top + h)
+                for (k in runStart..end) area.lineTo(x(k), y(s.values[k]!!))
+                area.lineTo(x(end), top + h)
+                area.close()
+                areaPaint.shader = LinearGradient(
+                    0f, top, 0f, top + h, (s.color and 0x00FFFFFF) or 0x3D000000, s.color and 0x00FFFFFF, Shader.TileMode.CLAMP
+                )
+                canvas.drawPath(area, areaPaint)
+            }
             s.values.forEachIndexed { i, v ->
-                if (v == null) { penDown = false; return@forEachIndexed }
-                if (!penDown) path.moveTo(x(i), y(v)) else path.lineTo(x(i), y(v))
+                if (v == null) { if (penDown) fillRun(i - 1); penDown = false; return@forEachIndexed }
+                if (!penDown) { path.moveTo(x(i), y(v)); runStart = i } else path.lineTo(x(i), y(v))
                 penDown = true
+            }
+            if (penDown) fillRun(s.values.lastIndex)
+            if (luminous) {
+                haloPaint.color = (s.color and 0x00FFFFFF) or 0x30000000
+                canvas.drawPath(path, haloPaint)
             }
             canvas.drawPath(path, linePaint)
         }

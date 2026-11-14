@@ -487,10 +487,18 @@ internal fun BottomPanel(
     Surface(
         color = HudGlass,
         shape = RoundedCornerShape(26.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, HudEdge),
+        // The instrument panel catches a line of mint light along its top edge.
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, Brush.verticalGradient(listOf(Brand.Mint.copy(alpha = 0.42f), Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.05f)))
+        ),
         modifier = modifier
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            Modifier
+                .background(Brush.verticalGradient(listOf(Color(0x40123A60), Color.Transparent)))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             // Recording status and its action share one slim strip (only while a live session runs).
             if (onFinish != null && state.rec.active && !state.isReplaying) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -729,7 +737,7 @@ private fun CueCallout(text: String, icon: ImageVector, color: Color, bold: Bool
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(color.copy(alpha = 0.16f))
+            .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.26f), color.copy(alpha = 0.10f))))
             .border(1.dp, color.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -753,7 +761,8 @@ private fun HudStat(label: String, value: String, modifier: Modifier) {
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.06f))
+            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.03f))))
+            .border(1.dp, HudEdge, RoundedCornerShape(12.dp))
             .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

@@ -1,5 +1,6 @@
 package com.companion.yogawellness.ui.settings
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -133,9 +134,9 @@ fun SettingsScreen(onBack: () -> Unit, onDataDeleted: () -> Unit, vm: WellnessVi
             Reveal(2) {
                 PanelCard(
                     spacing = 12.dp,
-                    color = MaterialTheme.colorScheme.surface,
                     borderColor = AppTheme.colors.danger.copy(alpha = 0.35f),
-                    elevation = 6.dp
+                    elevation = 6.dp,
+                    glow = AppTheme.colors.danger
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         IconBadge(Icons.Rounded.WarningAmber, AppTheme.colors.danger, size = 40.dp)
@@ -211,16 +212,18 @@ private fun PrivacyCard() {
     val c = AppTheme.colors
     PanelCard(
         color = c.heroStart,
-        brush = Brush.linearGradient(listOf(c.heroStart, c.heroMid, Brand.Teal700)),
+        brush = c.featureBrush,
         borderColor = null,
-        spacing = 14.dp
+        spacing = 14.dp,
+        glow = Brand.Mint
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(
                 Modifier
                     .size(52.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Brush.linearGradient(listOf(Brand.Mint, Brand.Teal500))),
+                    .background(Brush.linearGradient(listOf(Brand.Mint, Brand.Teal500)))
+                    .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.05f))), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Rounded.Shield, contentDescription = null, tint = Brand.Navy900, modifier = Modifier.size(28.dp))
@@ -266,7 +269,14 @@ private fun PersonaRow(p: Persona, loaded: Boolean, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.24f), tint.copy(alpha = 0.08f))))
+                    .border(1.dp, tint.copy(alpha = 0.30f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(letter, style = MaterialTheme.typography.titleMedium, color = tint)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -281,7 +291,7 @@ private fun PersonaRow(p: Persona, loaded: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun AboutCard() {
-    PanelCard(spacing = 14.dp, elevation = 0.dp, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)) {
+    PanelCard(spacing = 14.dp, elevation = 0.dp, color = AppTheme.colors.well, borderColor = AppTheme.colors.wellBorder) {
         Overline("About", color = AppTheme.colors.inkMuted)
         FeatureRow(
             Icons.Rounded.Info,

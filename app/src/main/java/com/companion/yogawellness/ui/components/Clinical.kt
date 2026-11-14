@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -13,6 +14,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -46,12 +48,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -90,6 +97,11 @@ fun ClinicalTopBar(
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
             .background(c.heroBrush)
+            .border(
+                1.dp,
+                Brush.verticalGradient(0f to Color.Transparent, 0.7f to Color.Transparent, 1f to Brand.Mint.copy(alpha = 0.22f)),
+                RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
+            )
     ) {
         HeroDecor(Modifier.matchParentSize(), intensity = 0.7f)
         Column(
@@ -138,49 +150,109 @@ fun GlassIconButton(
     container: Color = Color.White.copy(alpha = 0.14f),
     size: Dp = 42.dp
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier
             .minimumInteractiveComponentSize()
+            .pressScale(interaction, 0.92f)
             .size(size)
             .clip(CircleShape)
             .background(container)
-            .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-            .clickable(role = Role.Button, onClick = onClick),
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.08f))),
+                CircleShape
+            )
+            .clickable(interactionSource = interaction, indication = androidx.compose.material3.ripple(), role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(size * 0.52f))
     }
 }
 
-/** Elevated white card with a hairline border and a soft navy-tinted shadow. */
+/** Gentle spring press-scale for anything tappable. */
+fun Modifier.pressScale(interaction: InteractionSource, pressedScale: Float = 0.975f): Modifier = composed {
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        if (pressed) pressedScale else 1f, spring(dampingRatio = 0.72f, stiffness = 700f), label = "press"
+    )
+    graphicsLayer { scaleX = scale; scaleY = scale }
+}
+
+/** Shadow + tonal surface + lit top edge: the card treatment, for rows that manage their own content. */
+fun Modifier.cardSurface(shape: Shape, elevation: Dp = 6.dp): Modifier = composed {
+    val c = AppTheme.colors
+    this
+        .shadow(elevation, shape, ambientColor = c.shadow.copy(alpha = if (c.isDark) 0.30f else 0.06f), spotColor = c.shadow.copy(alpha = if (c.isDark) 0.55f else 0.14f))
+        .clip(shape)
+        .background(c.cardBrush)
+        .border(1.dp, c.cardEdgeBrush, shape)
+}
+
+/**
+ * The app's card: a tonal surface with a lit top edge and a soft shadow. [brush] turns it into a
+ * feature panel (brand gradient); [glow] adds a quiet corner light in an accent colour so
+ * important cards get their own identity without changing the surface.
+ */
 @Composable
 fun PanelCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    color: Color = MaterialTheme.colorScheme.surface,
+    color: Color = Color.Unspecified,
     brush: Brush? = null,
     shape: Shape = MaterialTheme.shapes.large,
     borderColor: Color? = AppTheme.colors.cardBorder,
     elevation: Dp = 10.dp,
     contentPadding: PaddingValues = PaddingValues(18.dp),
     spacing: Dp = 12.dp,
+    glow: Color? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val c = AppTheme.colors
+    val fill: Brush = brush ?: if (color.isSpecified) SolidColor(color) else c.cardBrush
+    val base = if (color.isSpecified) color else c.cardBottom
     val shadowed = if (elevation > 0.dp) {
-        modifier.shadow(elevation, shape, ambientColor = Color(0x10071A2F), spotColor = Color(0x22071A2F))
+        modifier.shadow(
+            elevation, shape,
+            ambientColor = c.shadow.copy(alpha = if (c.isDark) 0.30f else 0.06f),
+            spotColor = c.shadow.copy(alpha = if (c.isDark) 0.55f else 0.14f)
+        )
     } else modifier
-    val border = borderColor?.let { BorderStroke(1.dp, it) }
+    val border = when {
+        // Feature panels catch light on their top edge.
+        brush != null && borderColor == null ->
+            BorderStroke(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.03f))))
+        borderColor == null -> null
+        borderColor == c.cardBorder -> BorderStroke(1.dp, c.cardEdgeBrush)
+        else -> BorderStroke(1.dp, borderColor)
+    }
     val inner: @Composable () -> Unit = {
         Column(
-            (if (brush != null) Modifier.background(brush) else Modifier).padding(contentPadding),
+            Modifier
+                .background(fill)
+                .then(
+                    if (glow != null) Modifier.drawBehind {
+                        val r = size.width * 0.62f
+                        val centre = Offset(size.width * 0.96f, 0f)
+                        drawCircle(
+                            Brush.radialGradient(listOf(glow.copy(alpha = if (c.isDark) 0.20f else 0.10f), Color.Transparent), centre, r),
+                            r, centre
+                        )
+                    } else Modifier
+                )
+                .padding(contentPadding),
             verticalArrangement = Arrangement.spacedBy(spacing),
             content = content
         )
     }
     if (onClick != null) {
-        Surface(onClick = onClick, modifier = shadowed, shape = shape, color = color, border = border) { inner() }
+        val interaction = remember { MutableInteractionSource() }
+        Surface(
+            onClick = onClick, modifier = shadowed.pressScale(interaction, 0.985f), shape = shape, color = base,
+            border = border, interactionSource = interaction
+        ) { inner() }
     } else {
-        Surface(modifier = shadowed, shape = shape, color = color, border = border) { inner() }
+        Surface(modifier = shadowed, shape = shape, color = base, border = border) { inner() }
     }
 }
 
@@ -215,7 +287,7 @@ fun IconBadge(
     tint: Color,
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
-    iconSize: Dp = size * 0.55f,
+    iconSize: Dp = size * 0.52f,
     shape: Shape = RoundedCornerShape(size * 0.32f),
     filled: Boolean = false
 ) {
@@ -224,14 +296,24 @@ fun IconBadge(
             .size(size)
             .clip(shape)
             .background(
-                if (filled) Brush.linearGradient(listOf(tint, tint.copy(alpha = 0.78f)))
-                else SolidColor(tint.copy(alpha = 0.13f))
+                if (filled) Brush.linearGradient(listOf(lighten(tint, 0.18f), tint, tint.copy(alpha = 0.82f)))
+                else Brush.linearGradient(listOf(tint.copy(alpha = 0.22f), tint.copy(alpha = 0.09f)))
+            )
+            .border(
+                1.dp,
+                if (filled) Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.04f)))
+                else Brush.verticalGradient(listOf(tint.copy(alpha = 0.34f), tint.copy(alpha = 0.06f))),
+                shape
             ),
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription = null, tint = if (filled) Color.White else tint, modifier = Modifier.size(iconSize))
     }
 }
+
+private fun lighten(c: Color, by: Float) = Color(
+    red = c.red + (1f - c.red) * by, green = c.green + (1f - c.green) * by, blue = c.blue + (1f - c.blue) * by, alpha = c.alpha
+)
 
 @Composable
 fun Pill(
@@ -263,13 +345,16 @@ fun GlassPill(text: String, modifier: Modifier = Modifier, icon: ImageVector? = 
     Pill(
         text, modifier, icon,
         color = Color.White,
-        container = Color.White.copy(alpha = 0.13f),
-        border = Color.White.copy(alpha = 0.16f),
+        container = Color.White.copy(alpha = 0.10f),
+        border = Color.White.copy(alpha = 0.18f),
         iconTint = iconTint
     )
 }
 
-/** Primary call to action: brand gradient, gentle press-scale, disabled state that still reads clearly. */
+/**
+ * Primary call to action: brand gradient with a lit top edge and a coloured shadow. Pressing
+ * sinks it slightly and dims the sheen; the disabled state still reads clearly.
+ */
 @Composable
 fun GradientButton(
     text: String,
@@ -280,12 +365,12 @@ fun GradientButton(
     trailingIcon: ImageVector? = null,
     brush: Brush = AppTheme.colors.ctaBrush,
     contentColor: Color = Color.White,
-    height: Dp = 56.dp
+    height: Dp = 54.dp
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "press")
-    val shape = RoundedCornerShape(18.dp)
+    val sheen by animateFloatAsState(if (pressed) 0.04f else 0.20f, label = "sheen")
+    val shape = RoundedCornerShape(17.dp)
     val disabledBg = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
     val fg = if (enabled) contentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f)
     Surface(
@@ -295,9 +380,9 @@ fun GradientButton(
         color = Color.Transparent,
         interactionSource = interaction,
         modifier = modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .pressScale(interaction, 0.97f)
             .then(
-                if (enabled) Modifier.shadow(12.dp, shape, ambientColor = Brand.Teal600.copy(alpha = 0.25f), spotColor = Brand.Teal600.copy(alpha = 0.35f))
+                if (enabled) Modifier.shadow(14.dp, shape, ambientColor = Brand.Teal500.copy(alpha = 0.30f), spotColor = Brand.Teal500.copy(alpha = 0.55f))
                 else Modifier
             )
             .height(height)
@@ -305,15 +390,31 @@ fun GradientButton(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(if (enabled) brush else SolidColor(disabledBg)),
+                .background(if (enabled) brush else SolidColor(disabledBg))
+                .then(
+                    if (enabled) Modifier
+                        .drawBehind {
+                            // Sheen: light falling on the upper half.
+                            drawRect(
+                                Brush.verticalGradient(0f to Color.White.copy(alpha = sheen), 0.55f to Color.Transparent),
+                                size = Size(size.width, size.height * 0.55f)
+                            )
+                        }
+                        .border(
+                            1.dp,
+                            Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.42f), Color.White.copy(alpha = 0.04f))),
+                            shape
+                        )
+                    else Modifier
+                ),
             contentAlignment = Alignment.Center
         ) {
             Row(
                 Modifier.padding(horizontal = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
-                icon?.let { Icon(it, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp)) }
+                icon?.let { Icon(it, contentDescription = null, tint = fg, modifier = Modifier.size(21.dp)) }
                 Text(
                     text, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)
@@ -336,13 +437,16 @@ fun SoftButton(
     enabled: Boolean = true,
     height: Dp = 48.dp
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(14.dp),
         color = container,
         contentColor = color,
-        modifier = modifier.height(height)
+        border = BorderStroke(1.dp, Brush.verticalGradient(listOf(color.copy(alpha = 0.30f), color.copy(alpha = 0.10f)))),
+        interactionSource = interaction,
+        modifier = modifier.pressScale(interaction).height(height)
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp),
@@ -359,7 +463,10 @@ fun SoftButton(
 // Data display
 // ---------------------------------------------------------------------------------------------
 
-/** Circular progress ring that sweeps in from zero; [content] sits in the middle. */
+/**
+ * Circular progress ring that sweeps in from zero, with a soft halo under the arc and a bright
+ * marker at its leading end. [content] sits in the middle.
+ */
 @Composable
 fun RingGauge(
     progress: Float,
@@ -377,14 +484,21 @@ fun RingGauge(
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize()) {
             val s = stroke.toPx()
-            val topLeft = Offset(s / 2, s / 2)
-            val arc = Size(size.width - s, size.height - s)
+            // Inset so the halo and the end marker stay inside the bounds.
+            val inset = s * 0.9f
+            val topLeft = Offset(inset, inset)
+            val arc = Size(size.width - 2 * inset, size.height - 2 * inset)
             drawArc(trackColor, 0f, 360f, false, topLeft, arc, style = Stroke(s))
             val sweep = 360f * anim.value
             if (sweep > 0.5f) {
                 rotate(-90f) {
+                    drawArc(color.copy(alpha = 0.16f), 0f, sweep, false, topLeft, arc, style = Stroke(s * 1.8f, cap = StrokeCap.Round))
                     if (brush != null) drawArc(brush, 0f, sweep, false, topLeft, arc, style = Stroke(s, cap = StrokeCap.Round))
                     else drawArc(color, 0f, sweep, false, topLeft, arc, style = Stroke(s, cap = StrokeCap.Round))
+                    val a = Math.toRadians(sweep.toDouble())
+                    val r = arc.width / 2f
+                    val head = Offset(center.x + r * kotlin.math.cos(a).toFloat(), center.y + r * kotlin.math.sin(a).toFloat())
+                    drawCircle(Color.White, s * 0.30f, head)
                 }
             }
         }
@@ -392,7 +506,7 @@ fun RingGauge(
     }
 }
 
-/** Thin rounded progress bar with an animated fill. */
+/** Rounded progress bar with an animated gradient fill and a bright leading edge. */
 @Composable
 fun ProgressTrack(
     progress: Float,
@@ -405,13 +519,16 @@ fun ProgressTrack(
     val anim = remember { Animatable(0f) }
     LaunchedEffect(progress) { anim.animateTo(progress.coerceIn(0f, 1f), tween(700, easing = FastOutSlowInEasing)) }
     Canvas(modifier.fillMaxWidth().height(height)) {
-        val r = androidx.compose.ui.geometry.CornerRadius(size.height / 2, size.height / 2)
+        val r = CornerRadius(size.height / 2, size.height / 2)
         drawRoundRect(trackColor, cornerRadius = r)
         val w = size.width * anim.value
         if (w > 0f) {
             val fillSize = Size(maxOf(w, size.height), size.height)
-            if (brush != null) drawRoundRect(brush, size = fillSize, cornerRadius = r)
-            else drawRoundRect(color, size = fillSize, cornerRadius = r)
+            drawRoundRect(
+                brush ?: Brush.horizontalGradient(listOf(color.copy(alpha = 0.55f), color), endX = fillSize.width),
+                size = fillSize, cornerRadius = r
+            )
+            drawCircle(Color.White.copy(alpha = 0.9f), size.height * 0.22f, Offset(fillSize.width - size.height / 2, size.height / 2))
         }
     }
 }
@@ -428,7 +545,7 @@ fun MetricTile(
     delta: String? = null,
     deltaPositive: Boolean? = null
 ) {
-    PanelCard(modifier, contentPadding = PaddingValues(16.dp), spacing = 10.dp, elevation = 6.dp) {
+    PanelCard(modifier, contentPadding = PaddingValues(14.dp), spacing = 10.dp, elevation = 6.dp, glow = accent) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(icon, accent, size = 36.dp)
             Spacer(Modifier.weight(1f))
@@ -442,7 +559,10 @@ fun MetricTile(
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(value, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+            Text(
+                value, style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.onSurface, maxLines = 1
+            )
             Text(label, style = MaterialTheme.typography.labelMedium, color = AppTheme.colors.inkMuted, maxLines = 1)
             sub?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.inkMuted, maxLines = 2) }
         }
@@ -475,8 +595,8 @@ fun Callout(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(color.copy(alpha = 0.09f))
-            .border(1.dp, color.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
+            .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.14f), color.copy(alpha = 0.05f))))
+            .border(1.dp, color.copy(alpha = 0.24f), RoundedCornerShape(18.dp))
             .padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {

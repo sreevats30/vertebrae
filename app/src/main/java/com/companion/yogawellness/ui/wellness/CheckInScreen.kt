@@ -1,5 +1,12 @@
 package com.companion.yogawellness.ui.wellness
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -162,6 +169,7 @@ private fun moodWord(v: Int) = when (v) { in 1..2 -> "Very low"; in 3..4 -> "Low
 private fun stressWord(v: Int) = when (v) { in 1..2 -> "Calm"; in 3..4 -> "Mild"; in 5..6 -> "Moderate"; in 7..8 -> "High"; else -> "Very high" }
 private fun sleepWord(v: Int) = when (v) { in 1..2 -> "Very poor"; in 3..4 -> "Poor"; in 5..6 -> "Fair"; in 7..8 -> "Good"; else -> "Excellent" }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScaleCard(
     label: String,
@@ -173,9 +181,9 @@ private fun ScaleCard(
     word: (Int) -> String,
     onChange: (Int) -> Unit
 ) {
-    PanelCard(spacing = 6.dp, elevation = 6.dp) {
+    PanelCard(spacing = 6.dp, elevation = 6.dp, glow = if (value != null) color else null) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            IconBadge(icon, color, size = 40.dp)
+            IconBadge(icon, color, size = 40.dp, filled = value != null)
             Column(Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Text(
@@ -194,20 +202,50 @@ private fun ScaleCard(
             }
         }
         // Unrated: an empty track with no thumb; tapping or dragging anywhere sets the value.
-        val faint = color.copy(alpha = 0.16f)
+        val well = AppTheme.colors.well
+        val wellBorder = AppTheme.colors.wellBorder
+        val thumbSize = 28.dp
         Slider(
             value = value?.toFloat() ?: 1f,
             onValueChange = { onChange(it.roundToInt()) },
             valueRange = 1f..10f,
             steps = 8,
-            colors = SliderDefaults.colors(
-                thumbColor = if (value != null) color else Color.Transparent,
-                activeTrackColor = if (value != null) color else faint,
-                inactiveTrackColor = faint,
-                activeTickColor = if (value != null) Color.White.copy(alpha = 0.6f) else color.copy(alpha = 0.45f),
-                inactiveTickColor = color.copy(alpha = 0.45f)
-            ),
-            modifier = if (value == null) Modifier.semantics { stateDescription = "$label not rated yet" } else Modifier
+            modifier = if (value == null) Modifier.semantics { stateDescription = "$label not rated yet" } else Modifier,
+            thumb = {
+                // A lit bead with a halo; invisible (but still occupying its slot) until a value is set.
+                Box(
+                    Modifier
+                        .size(thumbSize)
+                        .drawBehind {
+                            if (value == null) return@drawBehind
+                            drawCircle(color.copy(alpha = 0.22f), size.minDimension * 0.68f)
+                            drawCircle(Color.White, size.minDimension * 0.42f)
+                            drawCircle(color, size.minDimension * 0.30f)
+                        }
+                )
+            },
+            track = {
+                Canvas(Modifier.fillMaxWidth().height(12.dp)) {
+                    val r = CornerRadius(size.height / 2, size.height / 2)
+                    drawRoundRect(well, cornerRadius = r)
+                    drawRoundRect(wellBorder, cornerRadius = r, style = Stroke(1.dp.toPx()))
+                    // The thumb's centre travels between half a thumb in from each end.
+                    val inset = thumbSize.toPx() / 2f
+                    val span = size.width - 2 * inset
+                    if (value != null) {
+                        val end = inset + span * (value - 1) / 9f
+                        drawRoundRect(
+                            Brush.horizontalGradient(listOf(color.copy(alpha = 0.35f), color), endX = end),
+                            size = Size(end, size.height), cornerRadius = r
+                        )
+                    }
+                    for (n in 0..9) {
+                        val x = inset + span * n / 9f
+                        val passed = value != null && n < value
+                        drawCircle(if (passed) Color.White.copy(alpha = 0.7f) else color.copy(alpha = 0.55f), 1.5.dp.toPx(), Offset(x, size.height / 2))
+                    }
+                }
+            }
         )
         Row {
             Text(low, style = MaterialTheme.typography.labelMedium, color = AppTheme.colors.inkMuted, modifier = Modifier.weight(1f))
@@ -232,8 +270,8 @@ private fun TensionPicker(label: String, value: Int?, onChange: (Int?) -> Unit) 
                         .weight(1f)
                         .aspectRatio(0.82f)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (on) Brush.verticalGradient(listOf(heat, heat.copy(alpha = 0.8f))) else Brush.verticalGradient(listOf(heat.copy(alpha = 0.10f), heat.copy(alpha = 0.10f))))
-                        .border(1.dp, if (on) heat else Color.Transparent, RoundedCornerShape(10.dp))
+                        .background(if (on) Brush.verticalGradient(listOf(heat, heat.copy(alpha = 0.8f))) else Brush.verticalGradient(listOf(heat.copy(alpha = 0.16f), heat.copy(alpha = 0.06f))))
+                        .border(1.dp, if (on) Color.White.copy(alpha = 0.45f) else heat.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
                         .selectable(selected = on, role = Role.RadioButton) { onChange(if (on) null else n) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -268,7 +306,8 @@ private fun TensionDelta(pre: Int, post: Int) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(color.copy(alpha = 0.09f))
+            .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.14f), color.copy(alpha = 0.05f))))
+            .border(1.dp, color.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
