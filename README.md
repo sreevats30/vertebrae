@@ -551,39 +551,16 @@ and Settings open full-screen without the bar.
 - **Camera Preview FIT_CENTER**: The camera preview renders using `FIT_CENTER` (displaying the entire analysed sensor frame without cropping) so the user's perception of "full body in frame" matches the algorithmic bounding box.
 - **Procedural Single-Segment Spine Solver**: Learn demos utilize a unified torso vector. Complex spinal curves (Cat-Cow, Cobra) are procedurally modeled through coordinated head, hip, and arm angles. `ForwardKinematicsTest` verifies every joint angle against the FK solver within $\pm 3^\circ$ ($\pm 5^\circ$ for compound twists).
 
-### Visual & Architectural Design — "Practice Room"
+### Visual & Architectural Design — "Clinical Navy"
 
-**Direction — "practice room".** A dark, warm-neutral interface. The app is used with the phone propped up
-across a room, often in low light, and the camera screen is dark by nature, so every screen shares one dark
-identity (the app is dark-only). The look comes from typography, spacing and restraint rather than decoration.
+The interface uses the deep navy → teal identity with mint "vital" accents: a gradient hero header on every
+top-level screen, elevated `PanelCard` surfaces, glass pills, glowing `PoseGlyph` skeleton artwork and an animated
+ECG `PulseLine`. It follows the system light/dark setting. Tokens live in `ui/theme/Theme.kt` and `ui/theme/Type.kt`,
+shared components in `ui/components/Clinical.kt` and `ui/components/Artwork.kt` — see
+[Design System & UI Architecture](#-design-system--ui-architecture) below.
 
-- **Colour** (`ui/theme/Theme.kt`, `AppTheme.colors`):
-  - *Neutrals* are warm ink, not slate: `canvas` (page), `raised` (sheets, dialogs), `control` (inputs, selector
-    tracks, media tiles), `line` / `lineStrong` (hairlines, outlines) and three text steps.
-  - *Ivory* (`inverse`) is the action colour: primary buttons and the selected option of a selector.
-  - *Jade* (`accent`) means "on target": active tab, progress, aligned joints, positive results.
-  - *Amber* and *coral* are reserved for caution and problems; score bands use jade / amber / coral.
-  - *Data series* (mood, stress, sleep, practice quality) have their own hues and appear only in charts and meters.
-- **Type** (`ui/theme/Type.kt`, both SIL OFL and bundled — the app has no internet permission):
-  - *Newsreader* (serif) for what you read as language: screen titles, the greeting, pose names, the findings
-    on Insights. Sanskrit names use its italic (`SanskritStyle`).
-  - *Inter* for everything you operate or measure: labels, controls, lists, and numbers — always with tabular
-    figures (`NumericStyle`). Section headings are small, semibold and sentence case (`SectionStyle`).
-- **Space and shape**: a 4-point scale with a 20 dp page gutter (`Space`); radii are 4 dp for small marks, 8 dp
-    for anything you press or type into, 12 dp for media and sheets (`Radius`). Selectors use concentric radii.
-- **Structure**: content is grouped into `Section`s separated by full-width hairlines and spacing — not cards.
-  Raised fills are kept for controls, media tiles, sheets and dialogs. Lists run edge to edge (`ListRow`).
-- **Screens** (`ui/components/Kit.kt`): `AppScreen` / `AppLazyScreen` give every screen the same slim bar; top-level
-  screens open with a large serif title that hands over to the bar's small title on scroll.
-- **Components**: `PrimaryButton` (ivory), `SecondaryButton` (outline), `TextAction`, `IconAction`, `Segmented`,
-  `Chip`, `ScaleSelector` (1–10 rating), `SearchField`, `CheckRow`, `RadioRow`, `AppSwitch`, `Stat`, `Meter`,
-  `SegmentMeter`, `Ring`, `Tag`, `StatusLabel`, `Notice` (a margin rule, not a box), `EmptyState`, `LoadingState`;
-  artwork in `Artwork.kt` is the `PoseGlyph` line figure.
-- **Navigation**: a hairline-topped bottom bar; the active tab has a filled icon, full-strength label and a short
-  jade bar on the top edge — never colour alone, no pill.
-- **Camera HUD**: translucent ink panels over the preview with the same ivory text, jade and score colours.
-- **Screenshots**: `./gradlew :app:testDebugUnitTest --tests '*ScreenRenderTest*'` renders every screen (including
-  full-length, narrow-phone, demo-data and 2× font variants) to `app/build/screenshots/`.
+- **Screenshots**: `./gradlew :app:testDebugUnitTest --tests '*ScreenRenderTest*'` renders the main screens to
+  `app/build/screenshots/`.
 
 ---
 

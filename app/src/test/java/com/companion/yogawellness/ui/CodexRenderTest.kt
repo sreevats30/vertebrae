@@ -36,7 +36,7 @@ import com.companion.yogawellness.scoring.Asana
 import com.companion.yogawellness.ui.codex.AsanaCodexScreen
 import com.companion.yogawellness.ui.codex.AsanaDetailContent
 import com.companion.yogawellness.ui.codex.AsanaDetailScreen
-import com.companion.yogawellness.ui.codex.viewerPalette
+import com.companion.yogawellness.ui.codex.DemoColors
 import com.companion.yogawellness.ui.codex.SkeletonThumbnail
 import com.companion.yogawellness.ui.theme.YogaWellnessTheme
 import org.junit.Assert.assertEquals
@@ -77,7 +77,7 @@ class CodexRenderTest {
         compose.onNodeWithText("Learn").assertExists()
         compose.onNodeWithText("1. Cat-Cow Flow").assertExists()
         save("codex_list")
-        compose.onNodeWithText("Scored live").performClick()
+        compose.onNodeWithText("Live-scored").performClick()
         listOf("14. Warrior II", "15. Chair Pose", "19. Tree Pose", "24. Triangle Pose").forEach {
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(it))
             compose.onNodeWithText(it).assertExists()
@@ -96,7 +96,7 @@ class CodexRenderTest {
         compose.onNodeWithContentDescription("Warrior II demo", substring = true).assertExists()
         compose.onNodeWithText("Play").assertExists() // paused at the peak: a visible Play button
         save("codex_detail_warrior_2")
-        compose.onNodeWithText("Practice this live").performClick() // pinned to the bottom of the screen
+        compose.onNodeWithText("Practice this live").performScrollTo().performClick()
         assertEquals(Asana.VIRABHADRASANA_II, practised)
         compose.onNodeWithText(CodexText.GLOBAL_DISCLAIMER).assertExists()
         save("codex_detail_warrior_2_bottom")
@@ -185,7 +185,7 @@ class CodexContactSheetTest {
                                     SkeletonThumbnail(item, view, Modifier.fillMaxWidth())
                                     Text(
                                         "${item.number}. ${item.englishName}", color = Color.White, fontSize = 10.sp, maxLines = 1,
-                                        modifier = Modifier.background(viewerPalette().background).fillMaxWidth()
+                                        modifier = Modifier.background(DemoColors.Background).fillMaxWidth()
                                     )
                                 }
                             }

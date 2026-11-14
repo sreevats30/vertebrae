@@ -18,9 +18,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +40,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FiberManualRecord
-import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Straighten
@@ -78,6 +75,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -90,22 +88,21 @@ import com.companion.yogawellness.pose.PreflightResult
 import com.companion.yogawellness.replay.DemoClips
 import com.companion.yogawellness.scoring.Asana
 import com.companion.yogawellness.scoring.CameraAngle
-import com.companion.yogawellness.ui.components.PrimaryButton
+import com.companion.yogawellness.ui.components.GradientButton
+import com.companion.yogawellness.ui.components.IconBadge
 import com.companion.yogawellness.ui.components.PoseGlyph
-import com.companion.yogawellness.ui.components.Ring
+import com.companion.yogawellness.ui.components.RingGauge
+import com.companion.yogawellness.ui.theme.Brand
 import com.companion.yogawellness.ui.theme.NumericStyle
-import com.companion.yogawellness.ui.theme.Radius
+import com.companion.yogawellness.ui.theme.OverlineStyle
 import com.companion.yogawellness.ui.theme.ScoreColors
 import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Locale
 
-/** HUD over the camera feed: translucent ink panels, a hairline edge, ivory text, jade for "on target". */
-private val HudGlass = Color(0xD90E0E0D)
-private val HudEdge = Color(0x14FFFFFF)
-private val HudAccent = Color(0xFF6DBE98)
-private val HudText = Color(0xFFEEECE7)
-private val HudInk = Color(0xFF0E0E0D)
+/** HUD surfaces over the camera feed: deep navy glass with a hairline edge. */
+private val HudGlass = Color(0xBF07111F)
+private val HudEdge = Color.White.copy(alpha = 0.12f)
 
 @Composable
 fun PracticeScreen(
@@ -145,7 +142,7 @@ fun PracticeScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Brush.verticalGradient(listOf(Brand.Navy950, Color.Black)))
     ) {
         if (!state.isReplaying) {
             if (hasCamera) {
@@ -186,9 +183,9 @@ fun PracticeScreen(
                 Spacer(Modifier.weight(1f))
                 Row(
                     Modifier
-                        .clip(RoundedCornerShape(Radius.L))
+                        .clip(CircleShape)
                         .background(HudGlass)
-                        .border(1.dp, HudEdge, RoundedCornerShape(Radius.L))
+                        .border(1.dp, HudEdge, CircleShape)
                         .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -202,7 +199,7 @@ fun PracticeScreen(
                             if (state.recordingSec != null) Icons.Rounded.Stop else Icons.Rounded.FiberManualRecord,
                             if (state.recordingSec != null) "Stop recording" else "Record 20 s pose clip",
                             vm::toggleRecording, bare = true,
-                            tint = if (state.recordingSec != null) HudText else ScoreColors.Red
+                            tint = if (state.recordingSec != null) Color.White else ScoreColors.Red
                         )
                     }
                     HudIconButton(Icons.Rounded.Replay, "Replay a clip", { showReplayPicker = true }, bare = true)
@@ -216,7 +213,7 @@ fun PracticeScreen(
             state.output?.safety?.let { SafetyAlertBanner(it.message) }
             state.output?.preflight?.let { if (!state.output!!.scoringArmed) PreflightPill(it) }
             (cameraError ?: state.error)?.let { ErrorPill(it) }
-            state.message?.let { HudPill(it, Icons.Rounded.CheckCircle, HudAccent) }
+            state.message?.let { HudPill(it, Icons.Rounded.CheckCircle, Brand.Mint) }
         }
 
         BottomPanel(
@@ -262,7 +259,7 @@ private fun HudIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     bare: Boolean = false,
-    tint: Color = HudText
+    tint: Color = Color.White
 ) {
     Surface(
         onClick = onClick,
@@ -283,10 +280,10 @@ private fun LiveChip(replaying: Boolean, fps: Double) {
     val alpha by pulse.animateFloat(1f, 0.25f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "dot")
     Row(
         Modifier
-            .clip(RoundedCornerShape(Radius.M))
+            .clip(CircleShape)
             .background(HudGlass)
-            .border(1.dp, HudEdge, RoundedCornerShape(Radius.M))
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .border(1.dp, HudEdge, CircleShape)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
@@ -295,11 +292,11 @@ private fun LiveChip(replaying: Boolean, fps: Double) {
                 .size(8.dp)
                 .graphicsLayer { this.alpha = alpha }
                 .clip(CircleShape)
-                .background(if (replaying) HudAccent else ScoreColors.Red)
+                .background(if (replaying) Brand.Cyan else ScoreColors.Red)
         )
-        Text(if (replaying) "Replay" else "Live", style = MaterialTheme.typography.labelMedium, color = HudText)
+        Text(if (replaying) "REPLAY" else "LIVE", style = OverlineStyle, color = Color.White)
         if (fps > 0) {
-            Text(String.format(Locale.US, "%.0f fps", fps), style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"), color = HudText.copy(alpha = 0.6f))
+            Text(String.format(Locale.US, "%.0f FPS", fps), style = OverlineStyle, color = Color.White.copy(alpha = 0.6f))
         }
     }
 }
@@ -311,7 +308,7 @@ private fun HudCard(
     edge: Color = HudEdge,
     content: @Composable () -> Unit
 ) {
-    Surface(color = color, shape = RoundedCornerShape(Radius.L), border = androidx.compose.foundation.BorderStroke(1.dp, edge), modifier = modifier) {
+    Surface(color = color, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, edge), modifier = modifier) {
         content()
     }
 }
@@ -321,7 +318,7 @@ private fun HudPill(text: String, icon: ImageVector, tint: Color) {
     HudCard {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
-            Text(text, color = HudText, style = MaterialTheme.typography.bodySmall)
+            Text(text, color = Color.White, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -351,11 +348,11 @@ private fun ReplayPickerDialog(clips: List<File>, onDemo: () -> Unit, onClip: (F
 
 @Composable
 private fun ReplayBanner(name: String, onStop: () -> Unit) {
-    HudCard {
+    HudCard(color = Brand.Teal700.copy(alpha = 0.9f)) {
         Row(Modifier.padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Rounded.Replay, contentDescription = null, tint = HudAccent, modifier = Modifier.size(18.dp))
-            Text("Replaying: $name", color = HudText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-            TextButton(onClick = onStop) { Text("Stop", color = HudAccent, style = MaterialTheme.typography.labelLarge) }
+            Icon(Icons.Rounded.Replay, contentDescription = null, tint = Brand.Mint, modifier = Modifier.size(18.dp))
+            Text("Replaying: $name", color = Color.White, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            TextButton(onClick = onStop) { Text("Stop", color = Brand.Mint, style = MaterialTheme.typography.labelLarge) }
         }
     }
 }
@@ -364,26 +361,26 @@ private fun ReplayBanner(name: String, onStop: () -> Unit) {
 private fun SafetyAlertBanner(message: String) {
     HudCard(color = ScoreColors.Red.copy(alpha = 0.94f), edge = Color.White.copy(alpha = 0.25f)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Rounded.WarningAmber, contentDescription = "Safety alert", tint = HudText, modifier = Modifier.size(24.dp))
-            Text(message, color = HudText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Icon(Icons.Rounded.WarningAmber, contentDescription = "Safety alert", tint = Color.White, modifier = Modifier.size(24.dp))
+            Text(message, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
 
 @Composable
 private fun SafetyBanner(onDismiss: () -> Unit) {
-    HudCard {
-        Row(Modifier.height(IntrinsicSize.Min).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.padding(vertical = 12.dp).width(2.dp).fillMaxHeight().background(ScoreColors.Amber, RoundedCornerShape(1.dp)))
+    HudCard(color = Color(0xF2FFF6E0), edge = ScoreColors.Amber.copy(alpha = 0.4f)) {
+        Row(Modifier.padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(Icons.Rounded.WarningAmber, contentDescription = null, tint = Color(0xFFB45309), modifier = Modifier.size(20.dp))
             Text(
                 "Practise on a non-slip surface. Stop immediately if you feel sharp pain, dizziness or joint strain.",
                 style = MaterialTheme.typography.bodySmall,
-                color = HudText.copy(alpha = 0.85f),
-                modifier = Modifier.weight(1f).padding(start = 12.dp, top = 10.dp, bottom = 10.dp)
+                color = Color(0xFF4A3300),
+                modifier = Modifier.weight(1f).padding(vertical = 10.dp)
             )
             Surface(onClick = onDismiss, color = Color.Transparent, shape = CircleShape, modifier = Modifier.size(44.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Close, contentDescription = "Dismiss", tint = HudText.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Close, contentDescription = "Dismiss", tint = Color(0xFF4A3300))
                 }
             }
         }
@@ -404,31 +401,32 @@ fun PreflightPill(preflight: PreflightResult) {
     HudCard {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Before scoring starts", style = MaterialTheme.typography.labelLarge, color = HudText, modifier = Modifier.weight(1f))
-                Text("$passed of ${preflight.checks.size} ready", style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"), color = HudText.copy(alpha = 0.6f))
+                Text("PRE-FLIGHT CHECKS", style = OverlineStyle, color = Brand.Mint, modifier = Modifier.weight(1f))
+                Text("$passed / ${preflight.checks.size}", style = MaterialTheme.typography.labelLarge, color = Color.White)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 preflight.checks.forEach { c ->
-                    val bg by animateColorAsState(if (c.ok) HudAccent.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.06f), label = "check")
+                    val bg by animateColorAsState(if (c.ok) ScoreColors.Green.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.10f), label = "check")
                     Row(
                         Modifier
-                            .clip(RoundedCornerShape(Radius.M))
+                            .clip(CircleShape)
                             .background(bg)
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .border(1.dp, if (c.ok) Color.Transparent else ScoreColors.Red.copy(alpha = 0.7f), CircleShape)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Icon(
                             if (c.ok) Icons.Rounded.Check else checkIcon(c.id),
                             contentDescription = null,
-                            tint = if (c.ok) HudAccent else ScoreColors.Red,
+                            tint = if (c.ok) Color.White else ScoreColors.Red,
                             modifier = Modifier.size(14.dp)
                         )
-                        Text(c.id.label, color = if (c.ok) HudText else HudText.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
+                        Text(c.id.label, color = Color.White, style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
-            preflight.primaryMessage?.let { Text(it, color = HudText.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium) }
+            preflight.primaryMessage?.let { Text(it, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodyMedium) }
         }
     }
 }
@@ -437,8 +435,8 @@ fun PreflightPill(preflight: PreflightResult) {
 private fun ErrorPill(message: String) {
     HudCard(color = ScoreColors.Red.copy(alpha = 0.9f)) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = HudText, modifier = Modifier.size(18.dp))
-            Text(message, color = HudText, style = MaterialTheme.typography.bodySmall)
+            Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Text(message, color = Color.White, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -448,22 +446,27 @@ private fun CameraPermissionPrompt(modifier: Modifier, onRequest: () -> Unit) {
     Column(
         modifier
             .padding(28.dp)
-            .clip(RoundedCornerShape(Radius.L))
+            .clip(RoundedCornerShape(28.dp))
             .background(HudGlass)
-            .border(1.dp, HudEdge, RoundedCornerShape(Radius.L))
+            .border(1.dp, HudEdge, RoundedCornerShape(28.dp))
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Icon(Icons.Rounded.CameraAlt, contentDescription = null, tint = HudText, modifier = Modifier.size(28.dp))
-        Text("Camera access", style = MaterialTheme.typography.headlineSmall, color = HudText)
+        IconBadge(Icons.Rounded.CameraAlt, Brand.Mint, size = 60.dp)
+        Text("Camera access", style = MaterialTheme.typography.titleLarge, color = Color.White)
         Text(
             "The camera is used only to estimate your pose on this phone. Frames are never saved or sent anywhere.",
-            color = HudText.copy(alpha = 0.8f),
+            color = Color.White.copy(alpha = 0.8f),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
-        PrimaryButton("Allow camera", onRequest, Modifier.fillMaxWidth())
+        GradientButton(
+            "Allow camera", onRequest, Modifier.fillMaxWidth(),
+            icon = Icons.Rounded.CameraAlt,
+            brush = Brush.horizontalGradient(listOf(Brand.Mint, Brand.Cyan)),
+            contentColor = Brand.Navy900
+        )
     }
 }
 
@@ -483,11 +486,11 @@ internal fun BottomPanel(
     val explain: @Composable () -> Unit = { ExplainChip(onExplain) }
     Surface(
         color = HudGlass,
-        shape = RoundedCornerShape(Radius.L),
+        shape = RoundedCornerShape(26.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, HudEdge),
         modifier = modifier
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // Recording status and its action share one slim strip (only while a live session runs).
             if (onFinish != null && state.rec.active && !state.isReplaying) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -498,15 +501,15 @@ internal fun BottomPanel(
             val label = out?.lockedLabel
             when {
                 !state.modelReady && state.error == null -> StatusRow(
-                    { CircularProgressIndicator(Modifier.size(22.dp), color = HudAccent, strokeWidth = 2.5.dp) },
+                    { CircularProgressIndicator(Modifier.size(22.dp), color = Brand.Mint, strokeWidth = 2.5.dp) },
                     "Loading pose model…", "On-device AI warming up", explain
                 )
                 out == null -> StatusRow(
-                    { Icon(Icons.Rounded.CameraAlt, contentDescription = null, tint = HudText, modifier = Modifier.size(26.dp)) },
+                    { IconBadge(Icons.Rounded.CameraAlt, Brand.Mint, size = 40.dp) },
                     "Set up your space", "Point the phone at your practice space, about 2–3 m away.", explain
                 )
                 !out.scoringArmed -> StatusRow(
-                    { PoseGlyph(Asana.TADASANA, Modifier.size(44.dp), color = HudText) },
+                    { PoseGlyph(Asana.TADASANA, Modifier.size(44.dp), glow = false) },
                     "Stand in Tadasana", "Stand in Tadasana facing the phone. Scoring starts when every check is green.", explain
                 )
                 label == null -> {
@@ -514,27 +517,27 @@ internal fun BottomPanel(
                     if (cand != null && out.lock.candidateProgress > 0.3) {
                         StatusRow(
                             {
-                                Ring(out.lock.candidateProgress.toFloat(), HudAccent, Modifier.size(44.dp), stroke = 4.dp, track = Color.White.copy(alpha = 0.14f)) {
-                                    PoseGlyph(cand.asana, Modifier.size(30.dp), color = HudText)
+                                RingGauge(out.lock.candidateProgress.toFloat(), Brand.Mint, Modifier.size(44.dp), stroke = 4.dp, trackColor = Color.White.copy(alpha = 0.12f)) {
+                                    PoseGlyph(cand.asana, Modifier.size(30.dp), glow = false)
                                 }
                             },
                             "Detecting ${cand.asana.sanskritName}…", "Hold steady while the pose locks in", explain
                         )
                     } else if (targetAsana != null) {
                         StatusRow(
-                            { PoseGlyph(targetAsana, Modifier.size(44.dp), color = HudText) },
+                            { PoseGlyph(targetAsana, Modifier.size(44.dp), glow = false) },
                             "Target: ${targetAsana.englishName}", targetHint(targetAsana), explain
                         )
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Move into a pose", style = MaterialTheme.typography.titleMedium, color = HudText, modifier = Modifier.weight(1f))
+                            Text("Move into a pose", style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.weight(1f))
                             explain()
                         }
                         PoseChooser()
                         Text(
                             "Move into a pose: Vrikshasana, Virabhadrasana II, Trikonasana, or Utkatasana (turn 45°/side-on for Chair).",
                             style = MaterialTheme.typography.bodySmall,
-                            color = HudText.copy(alpha = 0.7f)
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -542,8 +545,8 @@ internal fun BottomPanel(
                     val cal = out.calibration
                     StatusRow(
                         {
-                            Ring(cal.progress.toFloat(), HudAccent, Modifier.size(44.dp), stroke = 4.dp, track = Color.White.copy(alpha = 0.14f)) {
-                                PoseGlyph(Asana.TADASANA, Modifier.size(30.dp), color = HudText)
+                            RingGauge(cal.progress.toFloat(), Brand.Mint, Modifier.size(44.dp), stroke = 4.dp, trackColor = Color.White.copy(alpha = 0.12f)) {
+                                PoseGlyph(Asana.TADASANA, Modifier.size(30.dp), glow = false)
                             }
                         },
                         "Tadasana · neutral",
@@ -563,9 +566,9 @@ internal fun BottomPanel(
 /** Compact "Finish & Save" action that closes the session and shows its receipt. */
 @Composable
 private fun FinishChip(onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(Radius.M), color = HudText, contentColor = HudInk, modifier = Modifier.height(36.dp)) {
-        Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+    Surface(onClick = onClick, shape = CircleShape, color = Brand.Mint, contentColor = Brand.Navy900, modifier = Modifier.height(36.dp)) {
+        Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
             Text("Finish & Save", style = MaterialTheme.typography.labelLarge)
         }
     }
@@ -579,29 +582,29 @@ fun targetHint(target: Asana): String =
 
 @Composable
 private fun TargetChip(target: Asana) {
-    HudCard {
+    HudCard(color = Brand.Teal700.copy(alpha = 0.92f)) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PoseGlyph(target, Modifier.size(22.dp), color = HudText)
-            Text("Target: ${target.englishName}", color = HudText, style = MaterialTheme.typography.labelLarge)
+            PoseGlyph(target, Modifier.size(22.dp), glow = false)
+            Text("Target: ${target.englishName}", color = Color.White, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
-/** Compact button that opens the live score breakdown. */
+/** Compact Σ button (with an "EXPLAIN" caption) that opens the live score breakdown. */
 @Composable
 private fun ExplainChip(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(Radius.M),
-        color = Color.White.copy(alpha = 0.06f),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.10f),
         border = androidx.compose.foundation.BorderStroke(1.dp, HudEdge),
         modifier = Modifier
-            .size(width = 58.dp, height = 52.dp)
+            .size(width = 54.dp, height = 50.dp)
             .semantics { contentDescription = "Explain Score" }
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
-            Icon(Icons.Outlined.Info, contentDescription = null, tint = HudText, modifier = Modifier.size(20.dp))
-            Text("Explain", style = MaterialTheme.typography.labelSmall, color = HudText.copy(alpha = 0.7f))
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(Icons.Rounded.Functions, contentDescription = null, tint = Brand.Mint, modifier = Modifier.size(20.dp))
+            Text("EXPLAIN", style = OverlineStyle.copy(fontSize = 8.sp, letterSpacing = 0.06.em), color = Color.White.copy(alpha = 0.8f))
         }
     }
 }
@@ -611,8 +614,8 @@ private fun StatusRow(leading: @Composable () -> Unit, title: String, text: Stri
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { leading() }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = HudText)
-            Text(text, style = MaterialTheme.typography.bodySmall, color = HudText.copy(alpha = 0.7f))
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Text(text, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.72f))
         }
         trailing()
     }
@@ -625,14 +628,14 @@ private fun PoseChooser() {
             Column(
                 Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(Radius.M))
+                    .clip(RoundedCornerShape(14.dp))
                     .background(Color.White.copy(alpha = 0.06f))
                     .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                PoseGlyph(a, Modifier.size(40.dp), color = HudText)
-                Text(a.englishName.removeSuffix(" Pose"), style = MaterialTheme.typography.labelSmall, color = HudText.copy(alpha = 0.8f), maxLines = 1)
+                PoseGlyph(a, Modifier.size(40.dp), glow = false)
+                Text(a.englishName.removeSuffix(" Pose"), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
             }
         }
     }
@@ -648,11 +651,11 @@ private fun CoachCaption(u: CoachUtterance) {
     ) {
         Icon(
             Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = "Voice coach",
-            tint = if (safety) ScoreColors.Red else HudAccent, modifier = Modifier.size(16.dp)
+            tint = if (safety) ScoreColors.Red else Brand.Mint, modifier = Modifier.size(16.dp)
         )
         Text(
             "Coach: " + u.text,
-            color = if (safety) ScoreColors.Red else HudText.copy(alpha = 0.85f),
+            color = if (safety) ScoreColors.Red else Color.White.copy(alpha = 0.85f),
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -668,25 +671,23 @@ private fun ScoredPoseInfo(out: PipelineOutput, trailing: @Composable () -> Unit
     val score = out.score
     val color = scoreColor(score)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Ring(
-            ((score ?: 0.0) / 100.0).toFloat(), color, Modifier.size(64.dp), stroke = 5.dp,
-            track = Color.White.copy(alpha = 0.14f)
+        RingGauge(
+            ((score ?: 0.0) / 100.0).toFloat(), color, Modifier.size(60.dp), stroke = 6.dp,
+            trackColor = Color.White.copy(alpha = 0.12f),
+            brush = Brush.sweepGradient(listOf(color.copy(alpha = 0.6f), color))
         ) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(score?.let { "${it.toInt()}" } ?: "–", style = NumericStyle.copy(fontSize = 17.sp), color = HudText)
-                if (score != null) Text("%", style = NumericStyle.copy(fontSize = 10.sp), color = HudText.copy(alpha = 0.7f), modifier = Modifier.padding(bottom = 2.dp))
-            }
+            Text(score?.let { "${it.toInt()}%" } ?: "–", style = NumericStyle.copy(fontSize = 17.sp), color = Color.White)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text(label.asana.sanskritName, style = MaterialTheme.typography.titleMedium, color = HudText, maxLines = 2)
+            Text(label.asana.sanskritName, style = MaterialTheme.typography.titleMedium, color = Color.White, maxLines = 2)
             Text(
                 label.asana.englishName + if (label.asana.hasSides) " · ${label.side.label}" else "",
                 style = MaterialTheme.typography.bodySmall,
-                color = HudText.copy(alpha = 0.7f),
+                color = Color.White.copy(alpha = 0.7f),
                 maxLines = 1
             )
             if (label.asana.cameraAngle == CameraAngle.SIDE_OR_45) {
-                Text(label.asana.cameraAngle.instruction, style = MaterialTheme.typography.labelSmall, color = HudAccent)
+                Text(label.asana.cameraAngle.instruction, style = MaterialTheme.typography.labelSmall, color = Brand.Mint)
             }
         }
         trailing()
@@ -703,13 +704,13 @@ private fun ScoredPoseInfo(out: PipelineOutput, trailing: @Composable () -> Unit
     val h = out.hold
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         HudStat(
-            "Hold",
+            "HOLD",
             String.format(Locale.US, "%.1fs", h.graceHoldSec) + (label.asana.maxHoldSec?.let { "/$it" } ?: ""),
             Modifier.weight(1f)
         )
-        HudStat("Strict", String.format(Locale.US, "%.1fs", h.strictHoldSec), Modifier.weight(1f))
-        HudStat("Best", String.format(Locale.US, "%.1fs", h.bestGraceSec), Modifier.weight(1f))
-        out.sway?.let { HudStat("Stable", "${it.stability.toInt()}", Modifier.weight(1f)) }
+        HudStat("STRICT", String.format(Locale.US, "%.1fs", h.strictHoldSec), Modifier.weight(1f))
+        HudStat("BEST", String.format(Locale.US, "%.1fs", h.bestGraceSec), Modifier.weight(1f))
+        out.sway?.let { HudStat("STABLE", "${it.stability.toInt()}", Modifier.weight(1f)) }
         out.intraSymmetry?.let { HudStat("L/R", "${it.toInt()}%", Modifier.weight(1f)) }
     }
 }
@@ -727,16 +728,19 @@ private fun CueCallout(text: String, icon: ImageVector, color: Color, bold: Bool
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.M))
-            .background(color.copy(alpha = 0.14f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .clip(RoundedCornerShape(14.dp))
+            .background(color.copy(alpha = 0.16f))
+            .border(1.dp, color.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+        Box(Modifier.size(26.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+        }
         Text(
             text,
-            color = HudText,
+            color = Color.White,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
             modifier = Modifier.weight(1f)
@@ -748,13 +752,12 @@ private fun CueCallout(text: String, icon: ImageVector, color: Color, bold: Bool
 private fun HudStat(label: String, value: String, modifier: Modifier) {
     Column(
         modifier
-            .clip(RoundedCornerShape(Radius.M))
-            .background(Color.White.copy(alpha = 0.05f))
-            .padding(horizontal = 4.dp, vertical = 7.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(1.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = HudText.copy(alpha = 0.55f), maxLines = 1)
-        Text(value, style = NumericStyle.copy(fontSize = 14.sp), color = HudText, maxLines = 1)
+        Text(label, style = OverlineStyle.copy(fontSize = 8.5.sp, letterSpacing = 0.06.em), color = Color.White.copy(alpha = 0.6f), maxLines = 1)
+        Text(value, style = NumericStyle.copy(fontSize = 14.sp), color = Color.White, maxLines = 1)
     }
 }
