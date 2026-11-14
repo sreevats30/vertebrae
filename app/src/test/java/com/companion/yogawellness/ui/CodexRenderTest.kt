@@ -147,6 +147,7 @@ class CodexRenderTest {
         val app = androidx.test.core.app.ApplicationProvider.getApplicationContext<com.companion.yogawellness.YogaWellnessApp>()
         kotlinx.coroutines.runBlocking { app.repository.deleteAllData() }
         app.preferences.consentAcceptedAtMs = 1L
+        app.preferences.ageBand = com.companion.yogawellness.personalisation.AgeBand.AGE_18_30
         setScreen { AppNavHost() }
         compose.onNodeWithText("Learn").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("1. Cat-Cow Flow").fetchSemanticsNodes().isNotEmpty() }

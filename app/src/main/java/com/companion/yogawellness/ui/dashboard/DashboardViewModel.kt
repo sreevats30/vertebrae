@@ -1,5 +1,7 @@
 package com.companion.yogawellness.ui.dashboard
 
+import com.companion.yogawellness.wellness.Persona
+import com.companion.yogawellness.personalisation.AgeBand
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
@@ -30,9 +32,11 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val from = todayEpochDay - (DashboardBuilder.WINDOW_DAYS - 1)
 
     /** Dashboard data tagged with the profile it was computed from. */
-    data class ProfileDashboard(val profileId: String, val data: DashboardData) {
+    data class ProfileDashboard(val profileId: String, val data: DashboardData, private val ownBand: AgeBand? = null) {
         /** Non-null for demo data, so an exported demo PDF is always labelled as such. */
         val demoLabel: String? get() = if (ProfileIds.isDemo(profileId)) ProfileIds.displayName(profileId) else null
+        /** The viewed dataset's band: a demo persona's fixed band, or the user's own. */
+        val ageBand: AgeBand? get() = Persona.forProfileId(profileId)?.ageBand ?: ownBand
     }
 
     /** Recomputed (incl. the 5,000-shuffle permutation tests) off the main thread whenever data or the profile changes. */
@@ -49,6 +53,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 ProfileDashboard(pid, DashboardBuilder.build(checkIns, sessions, poses, phq + gad, todayEpochDay))
             }
         }
+        .combine(container.preferences.ageBandState) { pd, band -> pd.copy(ownBand = band) }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -60,7 +65,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val pd = profileData.value ?: return onError("Nothing to export yet")
         viewModelScope.launch {
             try {
-                val file = withContext(Dispatchers.IO) { PdfReportExporter.export(container.reportsDir, pd.data, pd.demoLabel) }
+                val file = withContext(Dispatchers.IO) { PdfReportExporter.export(container.reportsDir, pd.data, pd.demoLabel, pd.ageBand) }
                 onShare(PdfReportExporter.shareIntent(getApplication(), file))
             } catch (e: Exception) {
                 onError("Could not create the report: ${e.message}")

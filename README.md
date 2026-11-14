@@ -293,6 +293,28 @@ Live yoga practice is recorded continuously to eliminate data loss:
 
 ---
 
+## 🎯 Age-Based Personalisation
+
+The app asks for **one** personal detail, once, after the consent screen: an **age range** (Under 18, 18–30,
+31–50, 51–64, 65+). Only the range is stored — never a birthdate or exact age — in private app preferences on
+the device, and it can be changed in **Settings → Age range**. Existing users see the question once after
+upgrading. It is general wellness guidance, not medical advice, and it never blocks anything.
+
+| What it changes | Where | Code |
+|---|---|---|
+| Chair Pose hold cap (30 s; 20 s at 51–64; 15 s at 65+). Scoring and joint targets are identical for every band. | Practice (timer, HUD, voice coach) | `personalisation/AgeProfile.kt`, `PosePipeline` |
+| Which poses are a good fit, need care, or have a gentler option (all 32 poses × 5 bands) | Learn tags, **For you** filter, pose-page notes, a dismissable note when practising live | `codex/PoseSuitability.kt` |
+| A time-of-day routine (morning / desk break / standing & hips / evening calm; calm whenever the last check-in shows stress ≥ 7) and, after 5 sessions, your usual practice time | Home → **Today's suggestion** | `personalisation/RoutineSuggester.kt` |
+| Under 18: PHQ-9 / GAD-7 are not offered (Home, Insights, PDF); the daily check-in stays and Tele-MANAS (14416) is shown in Settings and Insights | Home, Insights, Settings | `AgeProfile.wellnessQuestionnairesEnabled` |
+| Optional daily reminder at your chosen (or usual) hour — off by default, a local notification only | Settings → Daily reminder | `personalisation/PracticeReminder.kt` |
+
+Demo personas carry fixed synthetic bands (A and B: 18–30, C: 31–50) and never change the user's own. The PDF
+report prints the band label only. **Delete All My Data** clears the band and turns the reminder off.
+
+> The starting values (caps, session lengths, pose rules) are conservative placeholders and need review by a
+> qualified yoga teacher or physician before release. Collecting data from under-18s may need verifiable parental
+> consent under India's DPDP Act — a legal decision to make before public release.
+
 ## 👥 Multi-Profile Isolation System
 
 To facilitate clean live demonstrations and research without polluting the user's authentic data:
@@ -575,7 +597,8 @@ shared components in `ui/components/Clinical.kt` and `ui/components/Artwork.kt` 
 
 Follow this 11-step script for live demonstrations, judge presentations, or testing:
 
-1. **Initial Launch**: Complete the three safety and consent checkboxes.
+1. **Initial Launch**: Complete the three safety and consent checkboxes, then choose an age range (try 65+ to see
+   the gentler suggestions, Learn's **For you** filter and the care notes on Tree Pose and Chair Pose).
 2. **Inspect Zero State**: The Home and Insights tabs start completely unpopulated; no fake or prefilled data exists.
 3. **Load Demo Profile**:
    - Navigate to **Settings** $\to$ **Demo data** $\to$ **Load Demo Personas**.
@@ -643,7 +666,10 @@ Follow this 11-step script for live demonstrations, judge presentations, or test
 1. **Zero Network Transmission**: The application strips `android.permission.INTERNET` at manifest merge time. It is physically impossible for the app to transmit data off the device.
 2. **No Video or Image Storage**: The camera stream is analysed purely in volatile RAM buffers. No camera frames, photos, or video recordings are written to disk.
 3. **Local Mathematical Storage**: Only raw joint coordinates (during explicit user recording) and aggregated numeric scalars (scores, angles, hold durations) are saved to the on-device SQLite database.
-4. **Complete Data Sovereignty**: The user can export their complete history to a PDF document or permanently wipe all database tables at any time via **Settings $\to$ Delete All My Data**.
+4. **Minimal Personal Data**: The only personal detail collected is an age range, kept in private on-device
+   preferences. The optional reminder adds `POST_NOTIFICATIONS` and `RECEIVE_BOOT_COMPLETED` — neither touches the
+   network; the merged manifest still has no `INTERNET` or `ACCESS_NETWORK_STATE`.
+5. **Complete Data Sovereignty**: The user can export their complete history to a PDF document or permanently wipe all database tables at any time via **Settings $\to$ Delete All My Data**.
 
 ---
 

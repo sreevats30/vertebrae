@@ -1,5 +1,14 @@
 package com.companion.yogawellness.ui.codex
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import com.companion.yogawellness.ui.onboarding.currentAgeBand
+import com.companion.yogawellness.personalisation.AgeBand
+import com.companion.yogawellness.codex.forYouSections
+import com.companion.yogawellness.codex.Suitability
+import com.companion.yogawellness.codex.PoseSuitability
+import com.companion.yogawellness.codex.PoseAdvice
+import com.companion.yogawellness.codex.CodexSection
 import com.companion.yogawellness.ui.components.cardSurface
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
@@ -87,12 +96,26 @@ fun filterCodex(
 
 /** The Learn tab: 32 poses with search, filters and static peak-pose thumbnails. */
 @Composable
-fun AsanaCodexScreen(onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
+fun AsanaCodexScreen(
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    /** Drives the suitability tags and the "For you" view; null shows the plain catalog. */
+    ageBand: AgeBand? = currentAgeBand()
+) {
     var query by rememberSaveable { mutableStateOf("") }
     var liveOnly by rememberSaveable { mutableStateOf(false) }
     var categoryName by rememberSaveable { mutableStateOf<String?>(null) }
+    var forYouChosen by rememberSaveable { mutableStateOf(false) }
+    val forYou = forYouChosen && ageBand != null
     val filter = CodexFilter(liveOnly, categoryName?.let { AsanaCategory.valueOf(it) })
-    val groups = remember(query, filter) { filterCodex(AsanaCatalog32.items, query, filter) }
+    val groups: List<CodexSection> = remember(query, filter, forYou, ageBand) {
+        if (forYou && ageBand != null) {
+            // Same search as every other view, regrouped by how well each pose suits the band.
+            forYouSections(filterCodex(AsanaCatalog32.items, query, CodexFilter.ALL).flatMap { it.second }, ageBand)
+        } else {
+            filterCodex(AsanaCatalog32.items, query, filter).map { (c, list) -> CodexSection(c.name, c.title, c.subtitle, list) }
+        }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -125,10 +148,13 @@ fun AsanaCodexScreen(onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
                     Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FilterPill("All", filter == CodexFilter.ALL) { liveOnly = false; categoryName = null }
-                    FilterPill("Live-scored", filter == CodexFilter.LIVE, live = true) { liveOnly = true; categoryName = null }
+                    FilterPill("All", !forYou && filter == CodexFilter.ALL) { liveOnly = false; categoryName = null; forYouChosen = false }
+                    if (ageBand != null) {
+                        FilterPill("For you", forYou) { liveOnly = false; categoryName = null; forYouChosen = true }
+                    }
+                    FilterPill("Live-scored", !forYou && filter == CodexFilter.LIVE, live = true) { liveOnly = true; categoryName = null; forYouChosen = false }
                     AsanaCategory.entries.forEach { c ->
-                        FilterPill(c.shortTitle, filter.category == c) { liveOnly = false; categoryName = c.name }
+                        FilterPill(c.shortTitle, !forYou && filter.category == c) { liveOnly = false; categoryName = c.name; forYouChosen = false }
                     }
                 }
             }
@@ -142,19 +168,32 @@ fun AsanaCodexScreen(onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
                     )
                 }
             }
-            groups.forEach { (category, list) ->
-                item(key = "header-${category.name}") {
+            if (forYou && ageBand != null && groups.isNotEmpty()) {
+                item(key = "for-you-note") {
+                    Text(
+                        "Sorted for ages ${ageBand.label.lowercase()}. Every pose stays open to you — this is general guidance, not medical advice.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppTheme.colors.inkMuted,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+            }
+            groups.forEach { section ->
+                val list = section.items
+                item(key = "header-${section.key}") {
                     Column(Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Overline("${list.size} ${if (list.size == 1) "pose" else "poses"}", color = AppTheme.colors.inkMuted)
                         Text(
-                            category.title, style = MaterialTheme.typography.titleLarge,
+                            section.title, style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.semantics { heading() }
                         )
-                        Text(category.subtitle, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.inkMuted)
+                        Text(section.subtitle, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.inkMuted)
                     }
                 }
-                items(list, key = { it.id }) { item -> CodexRow(item, onClick = { onOpen(item.id) }) }
+                items(list, key = { it.id }) { item ->
+                    CodexRow(item, ageBand?.let { PoseSuitability.adviceFor(item, it) }, onClick = { onOpen(item.id) })
+                }
             }
         }
     }
@@ -220,8 +259,9 @@ private fun FilterPill(text: String, selected: Boolean, live: Boolean = false, o
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CodexRow(item: AsanaCodexItem, onClick: () -> Unit) {
+private fun CodexRow(item: AsanaCodexItem, advice: PoseAdvice?, onClick: () -> Unit) {
     val shape = RoundedCornerShape(22.dp)
     Row(
         Modifier
@@ -253,13 +293,25 @@ private fun CodexRow(item: AsanaCodexItem, onClick: () -> Unit) {
             Text("${item.number}. ${item.englishName}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Text(item.sanskritName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Text(item.everydayBenefit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 2.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(top = 2.dp)
+            ) {
                 Tag(item.difficulty.label, if (item.difficulty == Difficulty.INTERMEDIATE) ScoreColors.Amber else AppTheme.colors.inkMuted)
                 if (item.isLive) Tag("Live-scored", ScoreColors.Green)
+                advice?.suitability?.tag?.let { Tag(it, suitabilityColor(advice.suitability)) }
             }
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.inkMuted)
     }
+}
+
+/** Tag colour for a suitability: the accent for a recommendation, amber for anything that asks for care. */
+@Composable
+internal fun suitabilityColor(s: Suitability): Color = when (s) {
+    Suitability.RECOMMENDED -> MaterialTheme.colorScheme.primary
+    Suitability.OK -> AppTheme.colors.inkMuted
+    Suitability.CAUTION, Suitability.USE_EASIER_VARIANT -> ScoreColors.Amber
 }
 
 @Composable

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -110,7 +111,8 @@ fun ClinicalTopBar(
                 .statusBarsPadding()
                 .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = if (bottom != null) 18.dp else 14.dp)
         ) {
-            Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+            // A minimum, not a fixed height: the title block grows with large font sizes instead of clipping.
+            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (onBack != null) {
                     GlassIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack)
                 } else {

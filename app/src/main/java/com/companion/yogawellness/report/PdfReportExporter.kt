@@ -1,5 +1,7 @@
 package com.companion.yogawellness.report
 
+import com.companion.yogawellness.personalisation.AgeProfile
+import com.companion.yogawellness.personalisation.AgeBand
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
@@ -31,11 +33,11 @@ object PdfReportExporter {
     const val PAGE_W = 595
     const val PAGE_H = 842
 
-    fun writePdf(data: DashboardData, out: OutputStream, personaLabel: String? = null) {
+    fun writePdf(data: DashboardData, out: OutputStream, personaLabel: String? = null, ageBand: AgeBand? = null) {
         val doc = PdfDocument()
         try {
             val page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, 1).create())
-            ReportPageRenderer.draw(page.canvas, PAGE_W.toFloat(), PAGE_H.toFloat(), data, personaLabel)
+            ReportPageRenderer.draw(page.canvas, PAGE_W.toFloat(), PAGE_H.toFloat(), data, personaLabel, ageBand)
             doc.finishPage(page)
             doc.writeTo(out)
         } finally {
@@ -43,10 +45,10 @@ object PdfReportExporter {
         }
     }
 
-    fun export(dir: File, data: DashboardData, personaLabel: String?): File {
+    fun export(dir: File, data: DashboardData, personaLabel: String?, ageBand: AgeBand? = null): File {
         dir.mkdirs()
         val file = File(dir, "weekly_report_${LocalDate.ofEpochDay(data.toEpochDay)}.pdf")
-        file.outputStream().use { writePdf(data, it, personaLabel) }
+        file.outputStream().use { writePdf(data, it, personaLabel, ageBand) }
         return file
     }
 
@@ -72,7 +74,8 @@ object ReportPageRenderer {
     private fun f0(v: Double) = String.format(Locale.US, "%.0f", v)
     private fun f1(v: Double) = String.format(Locale.US, "%.1f", v)
 
-    fun draw(canvas: Canvas, w: Float, h: Float, data: DashboardData, personaLabel: String?) {
+    /** [ageBand] prints as its band label only — nothing more specific exists to print. */
+    fun draw(canvas: Canvas, w: Float, h: Float, data: DashboardData, personaLabel: String?, ageBand: AgeBand? = null) {
         val contentW = w - 2 * MARGIN
         canvas.drawColor(0xFFFFFFFF.toInt())
         var y = MARGIN
@@ -87,6 +90,10 @@ object ReportPageRenderer {
             MARGIN, y + 10f, text(9.5f, C.inkSecondary)
         )
         y += 16f
+        ageBand?.let {
+            canvas.drawText("Age range: ${it.label}", MARGIN, y + 10f, text(9.5f, C.inkSecondary))
+            y += 14f
+        }
         if (personaLabel != null) {
             // Demo PDFs must never be mistaken for the user's own report.
             canvas.drawText(
@@ -162,8 +169,12 @@ object ReportPageRenderer {
             else "${type.shortName}: " + list.takeLast(4).joinToString(" → ") {
                 "${it.totalScore}/${type.maxScore} (${LocalDate.ofEpochDay(it.epochDay).format(SHORT)})"
             }
-        canvas.drawText(scores(QuestionnaireType.PHQ9, data.phq), MARGIN, y + 9f, text(9.5f, C.inkPrimary)); y += 13f
-        canvas.drawText(scores(QuestionnaireType.GAD7, data.gad), MARGIN, y + 9f, text(9.5f, C.inkPrimary)); y += 13f
+        if (AgeProfile.questionnairesEnabledFor(ageBand)) {
+            canvas.drawText(scores(QuestionnaireType.PHQ9, data.phq), MARGIN, y + 9f, text(9.5f, C.inkPrimary)); y += 13f
+            canvas.drawText(scores(QuestionnaireType.GAD7, data.gad), MARGIN, y + 9f, text(9.5f, C.inkPrimary)); y += 13f
+        } else {
+            canvas.drawText("PHQ-9 / GAD-7 are not offered for this age range.", MARGIN, y + 9f, text(9.5f, C.inkPrimary)); y += 13f
+        }
         data.tension?.let {
             canvas.drawText(
                 "Self-rated body tension: ${f1(it.meanBefore)} before → ${f1(it.meanAfter)} after practice (average of ${it.days} days)",

@@ -82,7 +82,7 @@ internal val STANDING_POSES = listOf(
             "Hold for a few breaths, then straighten up."
         ),
         commonMistakes = listOf("Knees moving far past the toes.", "Rounding or over-arching the lower back.", "Lifting the heels."),
-        safety = "Knees and lower back: keep the hold short (the live coach caps it at 30 s) and stop if the back or knees ache.",
+        safety = "Knees and lower back: keep the hold short (the live coach caps it at 30 s, or less for older age ranges) and stop if the back or knees ache.",
         modifications = listOf("Hands together at the chest.", "Sit less deep.")
     ),
     AsanaCodexItem(

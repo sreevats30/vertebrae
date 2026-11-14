@@ -1,5 +1,21 @@
 package com.companion.yogawellness.ui.settings
 
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.Switch
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import com.companion.yogawellness.personalisation.RoutineSuggester
+import com.companion.yogawellness.personalisation.PracticeReminder
+import com.companion.yogawellness.ui.wellness.SupportLineCard
+import androidx.compose.material.icons.rounded.Edit
+import com.companion.yogawellness.ui.onboarding.AgeBandOptions
+import com.companion.yogawellness.ui.onboarding.AGE_RANGE_REASON
+import com.companion.yogawellness.personalisation.AgeBand
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +91,8 @@ fun SettingsScreen(onBack: () -> Unit, onDataDeleted: () -> Unit, vm: WellnessVi
     var confirmPersona by remember { mutableStateOf<Persona?>(null) }
     var confirmRemoveDemo by remember { mutableStateOf(false) }
     val viewing by vm.activeProfileId.collectAsStateWithLifecycle()
+    val ageBand by vm.ageBand.collectAsStateWithLifecycle()
+    var editAge by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -101,7 +119,10 @@ fun SettingsScreen(onBack: () -> Unit, onDataDeleted: () -> Unit, vm: WellnessVi
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Reveal(0) { PrivacyCard() }
-            Reveal(1) {
+            Reveal(1) { AgeRangeCard(ageBand, onChange = { editAge = true }) }
+            Reveal(2) { ReminderCard(vm) }
+            Reveal(3) { SupportLineCard() }
+            Reveal(4) {
                 PanelCard(spacing = 12.dp, elevation = 6.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         IconBadge(Icons.Rounded.Science, Brand.Mood, size = 40.dp)
@@ -131,7 +152,7 @@ fun SettingsScreen(onBack: () -> Unit, onDataDeleted: () -> Unit, vm: WellnessVi
                     )
                 }
             }
-            Reveal(2) {
+            Reveal(5) {
                 PanelCard(
                     spacing = 12.dp,
                     borderColor = AppTheme.colors.danger.copy(alpha = 0.35f),
@@ -159,11 +180,14 @@ fun SettingsScreen(onBack: () -> Unit, onDataDeleted: () -> Unit, vm: WellnessVi
                     )
                 }
             }
-            Reveal(3) { AboutCard() }
+            Reveal(6) { AboutCard() }
             Spacer(Modifier.height(8.dp))
         }
     }
 
+    if (editAge) {
+        AgeRangeDialog(current = ageBand, onSave = { vm.setAgeBand(it); editAge = false }, onDismiss = { editAge = false })
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -205,6 +229,100 @@ fun SettingsScreen(onBack: () -> Unit, onDataDeleted: () -> Unit, vm: WellnessVi
             dismissButton = { TextButton(onClick = { confirmRemoveDemo = false }) { Text("Cancel") } }
         )
     }
+}
+
+/**
+ * Optional daily reminder. Off by default; switching it on asks for the notification permission on
+ * Android 13+ and stays off if that is refused. The hour starts at the user's usual practice time.
+ */
+@Composable
+private fun ReminderCard(vm: WellnessViewModel) {
+    val context = LocalContext.current
+    val reminder by vm.reminder.collectAsStateWithLifecycle()
+    val usual by vm.usualPracticeHour.collectAsStateWithLifecycle()
+    val (enabled, hour) = reminder
+    var refused by remember { mutableStateOf(false) }
+    val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        refused = !granted
+        if (granted) vm.setReminder(true, hour)
+    }
+    PanelCard(spacing = 12.dp, elevation = 6.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            IconBadge(Icons.Rounded.Alarm, MaterialTheme.colorScheme.primary, size = 40.dp)
+            Column(Modifier.weight(1f)) {
+                Overline("Optional", color = AppTheme.colors.inkMuted)
+                Text("Daily reminder", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = { on ->
+                    when {
+                        !on -> vm.setReminder(false, hour)
+                        PracticeReminder.canNotify(context) -> vm.setReminder(true, if (!enabled && usual != null) usual!! else hour)
+                        else -> askPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                },
+                modifier = Modifier.semantics { contentDescription = "Daily practice reminder" }
+            )
+        }
+        Text(
+            "A notification on this phone at ${RoutineSuggester.formatHour(hour)} each day. It is created on the device — " +
+                "nothing is sent anywhere." + (usual?.let { " You usually practise around ${RoutineSuggester.formatHour(it)}." } ?: ""),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (refused) {
+            Text(
+                "Notifications are turned off for this app, so the reminder stays off. You can allow them in Android settings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppTheme.colors.warning
+            )
+        }
+        if (enabled) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SoftButton("Earlier", { vm.setReminder(true, (hour + 23) % 24) }, Modifier.weight(1f), icon = Icons.Rounded.Remove)
+                Text(RoutineSuggester.formatHour(hour), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                SoftButton("Later", { vm.setReminder(true, (hour + 1) % 24) }, Modifier.weight(1f), icon = Icons.Rounded.Add)
+            }
+        }
+    }
+}
+
+/** Settings → Age range: the band chosen at onboarding, with a way to change it. */
+@Composable
+private fun AgeRangeCard(band: AgeBand?, onChange: () -> Unit) {
+    PanelCard(spacing = 12.dp, elevation = 6.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            IconBadge(Icons.Rounded.Person, MaterialTheme.colorScheme.primary, size = 40.dp)
+            Column(Modifier.weight(1f)) {
+                Overline("Personalisation", color = AppTheme.colors.inkMuted)
+                Text("Age range", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+            Pill(band?.label ?: "Not set", color = if (band != null) MaterialTheme.colorScheme.primary else AppTheme.colors.warning)
+        }
+        Text(AGE_RANGE_REASON, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SoftButton("Change age range", onChange, Modifier.fillMaxWidth(), icon = Icons.Rounded.Edit)
+    }
+}
+
+@Composable
+private fun AgeRangeDialog(current: AgeBand?, onSave: (AgeBand) -> Unit, onDismiss: () -> Unit) {
+    var chosen by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        title = { Text("Your age range") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Suggestions and gentler defaults follow this. Only the range is stored, on this phone.")
+                AgeBandOptions(chosen, onSelect = { chosen = it })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { chosen?.let(onSave) }, enabled = chosen != null && chosen != current) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

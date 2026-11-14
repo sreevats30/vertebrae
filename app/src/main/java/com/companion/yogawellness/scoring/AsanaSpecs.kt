@@ -53,7 +53,7 @@ enum class Asana(
     UTKATASANA(
         "Chair Pose", "Utkatasana", CameraAngle.SIDE_OR_45, 0.15f,
         hasSides = false, isScored = true, maxHoldSec = 30,
-        safetyRule = "Endurance & back guard: hold capped at 30 s; stop if lower back or knees ache"
+        safetyRule = "Endurance & back guard: hold capped at 30 s or less; stop if lower back or knees ache"
     );
 
     val displayName: String get() = "$sanskritName ($englishName)"
