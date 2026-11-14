@@ -36,7 +36,7 @@ import com.companion.yogawellness.scoring.Asana
 import com.companion.yogawellness.ui.codex.AsanaCodexScreen
 import com.companion.yogawellness.ui.codex.AsanaDetailContent
 import com.companion.yogawellness.ui.codex.AsanaDetailScreen
-import com.companion.yogawellness.ui.codex.DemoColors
+import com.companion.yogawellness.ui.codex.viewerPalette
 import com.companion.yogawellness.ui.codex.SkeletonThumbnail
 import com.companion.yogawellness.ui.theme.YogaWellnessTheme
 import org.junit.Assert.assertEquals
@@ -185,7 +185,7 @@ class CodexContactSheetTest {
                                     SkeletonThumbnail(item, view, Modifier.fillMaxWidth())
                                     Text(
                                         "${item.number}. ${item.englishName}", color = Color.White, fontSize = 10.sp, maxLines = 1,
-                                        modifier = Modifier.background(DemoColors.Background).fillMaxWidth()
+                                        modifier = Modifier.background(viewerPalette().background).fillMaxWidth()
                                     )
                                 }
                             }
