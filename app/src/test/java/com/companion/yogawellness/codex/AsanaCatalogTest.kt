@@ -55,9 +55,10 @@ class AsanaCatalogTest {
         }
     }
 
-    @Test fun exactlyFourLiveItems_14_15_19_24() {
+    @Test fun liveItemsMatchLiveScoredCatalogRoster() {
         val live = items.filter { it.liveAsana != null }
-        assertEquals(listOf(14, 15, 19, 24), live.map { it.number })
+        val expectedNumbers = listOf(2, 12, 13, 14, 15, 19, 21, 24, 25, 26, 27, 29, 32)
+        assertEquals(expectedNumbers, live.map { it.number })
         assertNull("Mountain is calibration-only", AsanaCatalog32.byId("mountain")!!.liveAsana)
         assertTrue(live.all { it.liveAsana!!.isScored })
     }

@@ -55,6 +55,47 @@ object SafetyGuards {
                 if (knee > TRIANGLE_HYPEREXTENSION_DEG) SafetyAlert("triangle_knee", label.asana, TRIANGLE_KNEE_MESSAGE) else null
             }
 
+            Asana.VIRABHADRASANA_I -> {
+                val overshoot = warriorKneeOvershoot(frame, label.side.frontSide) ?: return null
+                if (overshoot > WARRIOR_OVERSHOOT_FRACTION) SafetyAlert("warrior1_knee", label.asana, WARRIOR_KNEE_MESSAGE) else null
+            }
+
+            Asana.UTTHITA_PARSVAKONASANA -> {
+                val overshoot = warriorKneeOvershoot(frame, label.side.frontSide) ?: return null
+                if (overshoot > WARRIOR_OVERSHOOT_FRACTION) SafetyAlert("side_angle_knee", label.asana, WARRIOR_KNEE_MESSAGE) else null
+            }
+
+            Asana.ARDHA_CHANDRASANA -> {
+                val knee = smoothedAngles["Standing Knee"] ?: return null
+                if (knee > TRIANGLE_HYPEREXTENSION_DEG) SafetyAlert("half_moon_knee", label.asana, "Soften your standing knee — do not hyperextend") else null
+            }
+
+            Asana.NECK_RELEASES -> {
+                val g = PoseGeometry(frame, 0.0)
+                val lEar = g.point(com.companion.yogawellness.pose.PoseLandmarkIndex.LEFT_EAR)
+                val rEar = g.point(com.companion.yogawellness.pose.PoseLandmarkIndex.RIGHT_EAR)
+                val nose = g.point(com.companion.yogawellness.pose.PoseLandmarkIndex.NOSE)
+                val lSh = g.point(com.companion.yogawellness.pose.PoseLandmarkIndex.LEFT_SHOULDER)
+                val rSh = g.point(com.companion.yogawellness.pose.PoseLandmarkIndex.RIGHT_SHOULDER)
+                val midEarY = (lEar.y + rEar.y) / 2.0
+                val midShY = (lSh.y + rSh.y) / 2.0
+                val earShDist = (midShY - midEarY) / g.torsoLengthPx
+                // Head tipped back: nose is higher than ears significantly
+                if (nose.y < midEarY - 0.05 * g.torsoLengthPx) {
+                    SafetyAlert("neck_head_back", label.asana, "Keep your neck long; do not tip your head backwards")
+                } else if (earShDist < 0.28) {
+                    SafetyAlert("neck_shrug", label.asana, "Relax your shoulders away from your ears")
+                } else null
+            }
+
+            Asana.ADHO_MUKHA_SVANASANA -> {
+                val arms = smoothedAngles["Arms Straight"] ?: 0.0
+                val legs = smoothedAngles["Legs Straight"] ?: 0.0
+                if (arms > 182.0 || legs > 182.0) {
+                    SafetyAlert("downward_dog_hyperextension", label.asana, "Keep a micro-bend; avoid locking your elbows or knees")
+                } else null
+            }
+
             else -> null
         }
     }

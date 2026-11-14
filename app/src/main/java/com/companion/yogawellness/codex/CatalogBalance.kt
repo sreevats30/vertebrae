@@ -58,7 +58,7 @@ internal val BALANCE_POSES = listOf(
         id = "half_moon", number = 21, sanskritName = "Ardha Chandrasana", englishName = "Half Moon Pose",
         category = AsanaCategory.BALANCE, everydayBenefit = "Steadies the sides of the hips and sharpens body awareness",
         difficulty = Difficulty.INTERMEDIATE, recommendedHoldSec = 15, breath = BreathPattern(4, 0, 4), defaultView = CodexView.FRONT,
-        liveAsana = null,
+        liveAsana = Asana.ARDHA_CHANDRASANA,
         start = PoseAngles.STANDING,
         peak = PoseAngles(rootRoll = 90.0f, lShoulderAbd = 90.0f, rShoulderAbd = 90.0f, lHipAbd = 90.0f, lKneeFlex = 5.0f),
         callouts = listOf(

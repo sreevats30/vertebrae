@@ -113,7 +113,8 @@ class PosePipeline(
      * shorter one (the practice screen does, from the user's age band). It only shortens the hold
      * timer — scoring is untouched. A change applies from the next time the pose locks.
      */
-    var utkatasanaCapSec: Int = Asana.UTKATASANA.maxHoldSec ?: 30
+    var utkatasanaCapSec: Int = Asana.UTKATASANA.maxHoldSec ?: 30,
+    var targetHint: Asana? = null
 ) {
 
     /** The endurance cap in force for [asana] (null = uncapped). */
@@ -151,7 +152,14 @@ class PosePipeline(
         val events = ArrayList<PipelineEvent>()
 
         // ---- Pre-flight arming --------------------------------------------------------------
-        val preflight = PreflightGuard.evaluate(frame, sensors)
+        val profile = targetHint?.let {
+            when (com.companion.yogawellness.scoring.PoseRegistry.familyFor(it)) {
+                com.companion.yogawellness.classifier.PostureFamily.STANDING -> PreflightProfile.STANDING
+                com.companion.yogawellness.classifier.PostureFamily.SEATED -> PreflightProfile.SEATED
+                com.companion.yogawellness.classifier.PostureFamily.FLOOR -> PreflightProfile.FLOOR_SIDE
+            }
+        } ?: PreflightProfile.STANDING
+        val preflight = PreflightGuard.evaluate(frame, sensors, profile)
         greenRun = if (preflight.allGreen) greenRun + 1 else 0
         phoneBadRun = if (!preflight.check(PreflightCheckId.PHONE).ok) phoneBadRun + 1 else 0
         if (!armed && greenRun >= ARM_FRAMES) {
@@ -171,7 +179,7 @@ class PosePipeline(
         }
 
         // ---- Stage 2: classify + temporal lock ----------------------------------------------
-        val classification = classifier.classify(frame)
+        val classification = classifier.classify(frame, targetHint)
         val previous = lock.locked
         val lockState = lock.update(classification.label)
         if (lockState.changed) {
@@ -214,6 +222,19 @@ class PosePipeline(
             val g = PoseGeometry(frame, 0.0)
             val hip = g.midHip
             swayResult = sway.update(t, hip.x, hip.y, torsoRef)
+
+            if (label.asana == Asana.SAVASANA) {
+                // Savasana scores stability via SwayStabilityTracker while lying flat
+                val stabilityScore = swayResult?.stability ?: 85.0
+                alignment = AlignmentScoreResult(
+                    finalScore = stabilityScore,
+                    weightedScore = stabilityScore,
+                    criticalCapValue = 100.0,
+                    isCappedByCritical = false,
+                    evaluations = emptyList(),
+                    primaryCorrectiveCue = if (stabilityScore < 70.0) "Let your body get heavy and still" else null
+                )
+            }
         }
 
         // A violated safety rule pauses the hold timer (and praise), however good the alignment is.

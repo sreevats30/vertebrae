@@ -16,6 +16,12 @@ enum class PreflightCheckId(val label: String) {
     LIGHTING("Lighting")
 }
 
+enum class PreflightProfile {
+    STANDING,
+    SEATED,
+    FLOOR_SIDE
+}
+
 data class PreflightCheck(val id: PreflightCheckId, val ok: Boolean, val message: String?)
 
 data class PreflightResult(val checks: List<PreflightCheck>) {
@@ -39,21 +45,42 @@ object PreflightGuard {
     const val MOTION_SD_MAX = 0.3
     const val LUMINANCE_MIN = 50.0
 
-    private val REQUIRED = listOf(
+    private val REQUIRED_STANDING = listOf(
         PoseLandmarkIndex.NOSE,
         PoseLandmarkIndex.LEFT_WRIST, PoseLandmarkIndex.RIGHT_WRIST,
         PoseLandmarkIndex.LEFT_ANKLE, PoseLandmarkIndex.RIGHT_ANKLE
     )
 
-    fun evaluate(frame: PoseFrame?, sensors: SensorSnapshot?): PreflightResult {
+    private val REQUIRED_SEATED = listOf(
+        PoseLandmarkIndex.NOSE,
+        PoseLandmarkIndex.LEFT_SHOULDER, PoseLandmarkIndex.RIGHT_SHOULDER,
+        PoseLandmarkIndex.LEFT_HIP, PoseLandmarkIndex.RIGHT_HIP
+    )
+
+    private val REQUIRED_FLOOR = listOf(
+        PoseLandmarkIndex.NOSE,
+        PoseLandmarkIndex.LEFT_SHOULDER, PoseLandmarkIndex.LEFT_HIP
+    )
+
+    fun evaluate(
+        frame: PoseFrame?,
+        sensors: SensorSnapshot?,
+        profile: PreflightProfile = PreflightProfile.STANDING
+    ): PreflightResult {
         val checks = ArrayList<PreflightCheck>(4)
+
+        val requiredLms = when (profile) {
+            PreflightProfile.STANDING -> REQUIRED_STANDING
+            PreflightProfile.SEATED -> REQUIRED_SEATED
+            PreflightProfile.FLOOR_SIDE -> REQUIRED_FLOOR
+        }
 
         // 1. Whole body in frame
         checks += when {
             frame == null || !frame.hasPose ->
                 PreflightCheck(PreflightCheckId.FULL_BODY, false, "Step into view so the camera can see you")
             else -> {
-                val bad = REQUIRED.filter { i ->
+                val bad = requiredLms.filter { i ->
                     val lm = frame[i]
                     lm.visibility < LANDMARK_VISIBILITY_MIN ||
                         lm.x < EDGE_MARGIN || lm.x > 1f - EDGE_MARGIN ||
@@ -64,14 +91,28 @@ object PreflightGuard {
             }
         }
 
-        // 2. Camera distance (torso fraction of frame height)
+        // 2. Camera distance
         checks += if (frame == null || !frame.hasPose) {
-            PreflightCheck(PreflightCheckId.DISTANCE, false, "Stand about 2–3 m from the phone")
+            when (profile) {
+                PreflightProfile.STANDING -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Stand about 2–3 m from the phone")
+                PreflightProfile.SEATED -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Sit about 1.5–2 m from the phone")
+                PreflightProfile.FLOOR_SIDE -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Place phone on the floor about 2 m away")
+            }
         } else {
             val fraction = torsoFraction(frame)
+            val minFrac = when (profile) {
+                PreflightProfile.STANDING -> TORSO_MIN_FRACTION
+                PreflightProfile.SEATED -> 0.22
+                PreflightProfile.FLOOR_SIDE -> 0.15
+            }
+            val maxFrac = when (profile) {
+                PreflightProfile.STANDING -> TORSO_MAX_FRACTION
+                PreflightProfile.SEATED -> 0.58
+                PreflightProfile.FLOOR_SIDE -> 0.65
+            }
             when {
-                fraction > TORSO_MAX_FRACTION -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Step back a little from the phone")
-                fraction < TORSO_MIN_FRACTION -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Come a little closer to the phone")
+                fraction > maxFrac -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Step back a little from the phone")
+                fraction < minFrac -> PreflightCheck(PreflightCheckId.DISTANCE, false, "Come a little closer to the phone")
                 else -> PreflightCheck(PreflightCheckId.DISTANCE, true, null)
             }
         }
@@ -80,7 +121,7 @@ object PreflightGuard {
         val tilt = sensors?.tilt
         val motion = sensors?.motionSd
         checks += when {
-            tilt != null && !tilt.isUprightOk -> PreflightCheck(
+            profile != PreflightProfile.FLOOR_SIDE && tilt != null && !tilt.isUprightOk -> PreflightCheck(
                 PreflightCheckId.PHONE, false,
                 tilt.warningMessage ?: "Prop your phone slightly more upright (<15° tilt) for accurate vertical alignment."
             )

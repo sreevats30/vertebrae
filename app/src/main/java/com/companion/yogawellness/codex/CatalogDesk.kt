@@ -1,6 +1,7 @@
 package com.companion.yogawellness.codex
 
 import com.companion.yogawellness.codex.CalloutJoint as J
+import com.companion.yogawellness.scoring.Asana
 
 internal val DESK_POSES = listOf(
     AsanaCodexItem(
@@ -31,7 +32,7 @@ internal val DESK_POSES = listOf(
         id = "seated_twist", number = 2, sanskritName = "Bharadvajasana", englishName = "Seated Spinal Twist",
         category = AsanaCategory.DESK, everydayBenefit = "Eases a tight lower back and sides after sitting",
         difficulty = Difficulty.BEGINNER, recommendedHoldSec = 30, breath = BreathPattern(4, 0, 6), defaultView = CodexView.FRONT,
-        liveAsana = null,
+        liveAsana = Asana.SEATED_TWIST,
         start = PoseAngles(lHipFlex = 133f, rHipFlex = 133f, lKneeFlex = 90f, rKneeFlex = 90f),
         peak = PoseAngles(trunkTwist = 45.0f, lShoulderFlex = 40.0f, lShoulderAbd = -30.0f, lElbowFlex = 30.0f, rShoulderFlex = -30.0f,
             rShoulderAbd = 20.0f, lHipFlex = 133.0f, lKneeFlex = 90.0f, rHipFlex = 133.0f, rKneeFlex = 90.0f),

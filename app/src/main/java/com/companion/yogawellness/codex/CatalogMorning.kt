@@ -1,6 +1,7 @@
 package com.companion.yogawellness.codex
 
 import com.companion.yogawellness.codex.CalloutJoint as J
+import com.companion.yogawellness.scoring.Asana
 
 internal val MORNING_POSES = listOf(
     AsanaCodexItem(
@@ -117,7 +118,7 @@ internal val MORNING_POSES = listOf(
         id = "downward_dog", number = 12, sanskritName = "Adho Mukha Svanasana", englishName = "Downward-Facing Dog",
         category = AsanaCategory.MORNING, everydayBenefit = "Stretches the whole back of the body and steadies the shoulders",
         difficulty = Difficulty.BEGINNER, recommendedHoldSec = 30, breath = BreathPattern(4, 0, 6), defaultView = CodexView.SIDE,
-        liveAsana = null,
+        liveAsana = Asana.ADHO_MUKHA_SVANASANA,
         start = PoseAngles.TABLETOP,
         peak = PoseAngles(rootPitch = 135.8f, lShoulderFlex = 175.0f, rShoulderFlex = 175.0f, lHipFlex = 105.0f, lKneeFlex = 10.0f,
             rHipFlex = 105.0f, rKneeFlex = 10.0f),

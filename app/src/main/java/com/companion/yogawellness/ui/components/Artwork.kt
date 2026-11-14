@@ -217,6 +217,102 @@ private fun figureFor(asana: Asana): Figure = when (asana) {
             angle = Triple(hip, o(37, 69), o(45, 94))
         )
     }
+    Asana.VIRABHADRASANA_I -> {
+        val s = o(46, 36); val hip = o(50, 60)
+        Figure(
+            o(46, 24), 6.5f,
+            listOf(s to hip) + chain(s, o(44, 18), o(42, 4)) +
+                chain(hip, o(32, 68), o(32, 94)) + chain(hip, o(70, 75), o(85, 94)),
+            angle = Triple(hip, o(32, 68), o(32, 94))
+        )
+    }
+    Asana.UTTHITA_PARSVAKONASANA -> {
+        val ls = o(36, 45); val rs = o(48, 38); val lh = o(42, 62); val rh = o(56, 58)
+        Figure(
+            o(30, 35), 6.5f,
+            listOf(ls to rs, lh to rh, ls to lh, rs to rh) +
+                chain(rs, o(24, 25), o(12, 12)) + chain(ls, o(32, 65), o(30, 80)) +
+                chain(lh, o(30, 66), o(30, 94)) + chain(rh, o(72, 75), o(86, 94)),
+            angle = Triple(lh, o(30, 66), o(30, 94))
+        )
+    }
+    Asana.ARDHA_CHANDRASANA -> {
+        val s = o(35, 50); val hip = o(55, 50)
+        Figure(
+            o(26, 45), 6.5f,
+            listOf(s to hip) + chain(s, o(35, 70), o(35, 92)) + chain(s, o(35, 30), o(35, 12)) +
+                chain(hip, o(55, 72), o(55, 94)) + chain(hip, o(75, 50), o(92, 50)),
+            angle = Triple(s, hip, o(55, 72))
+        )
+    }
+    Asana.MALASANA -> {
+        val s = o(50, 48); val lh = o(42, 70); val rh = o(58, 70)
+        Figure(
+            o(50, 36), 6.5f,
+            listOf(s to lh, s to rh, lh to rh) +
+                chain(s, o(42, 55), o(50, 58)) + chain(s, o(58, 55), o(50, 58)) +
+                chain(lh, o(30, 74), o(42, 94)) + chain(rh, o(70, 74), o(58, 94)),
+            angle = Triple(s, lh, o(30, 74))
+        )
+    }
+    Asana.BADDHA_KONASANA -> {
+        val s = o(50, 42); val hip = o(50, 72)
+        Figure(
+            o(50, 30), 6.5f,
+            listOf(s to hip) + chain(s, o(40, 58), o(50, 72)) + chain(s, o(60, 58), o(50, 72)) +
+                chain(hip, o(32, 78), o(50, 88)) + chain(hip, o(68, 78), o(50, 88)),
+            angle = Triple(hip, o(32, 78), o(50, 88))
+        )
+    }
+    Asana.SEATED_TWIST -> {
+        val s = o(50, 40); val hip = o(50, 72)
+        Figure(
+            o(50, 28), 6.5f,
+            listOf(s to hip) + chain(s, o(38, 55), o(35, 75)) + chain(s, o(62, 55), o(65, 75)) +
+                chain(hip, o(36, 80), o(46, 88)) + chain(hip, o(64, 80), o(54, 88)),
+            angle = Triple(s, hip, o(36, 80))
+        )
+    }
+    Asana.NECK_RELEASES -> {
+        val s = o(50, 45); val hip = o(50, 75)
+        Figure(
+            o(55, 32), 6.5f,
+            listOf(s to hip) + chain(s, o(38, 60), o(38, 80)) + chain(s, o(62, 60), o(62, 80)) +
+                chain(hip, o(40, 86), o(44, 94)) + chain(hip, o(60, 86), o(56, 94)),
+            angle = Triple(hip, s, o(55, 32))
+        )
+    }
+    Asana.ADHO_MUKHA_SVANASANA -> {
+        val hip = o(52, 35); val s = o(36, 60); val feet = o(78, 88); val hands = o(22, 88)
+        Figure(
+            o(32, 67), 6.5f,
+            listOf(hip to s) + chain(s, o(28, 75), hands) + chain(hip, o(65, 60), feet),
+            angle = Triple(s, hip, o(65, 60))
+        )
+    }
+    Asana.BALASANA -> {
+        val hip = o(72, 72); val s = o(45, 70); val head = o(35, 78)
+        Figure(
+            head, 6.0f,
+            listOf(hip to s, s to head) + chain(s, o(32, 80), o(22, 82)) + chain(hip, o(74, 82), o(68, 85)),
+            angle = Triple(hip, s, head)
+        )
+    }
+    Asana.VIPARITA_KARANI -> {
+        val hip = o(32, 80); val s = o(60, 82); val feet = o(32, 28)
+        Figure(
+            o(72, 82), 6.5f,
+            listOf(hip to s) + chain(s, o(55, 75), o(50, 75)) + chain(hip, o(32, 54), feet),
+            angle = Triple(s, hip, feet)
+        )
+    }
+    Asana.SAVASANA -> {
+        val head = o(25, 78); val s = o(40, 78); val hip = o(60, 78); val feet = o(85, 78)
+        Figure(
+            head, 6.5f,
+            listOf(head to s, s to hip, hip to feet) + chain(s, o(48, 84), o(55, 86)) + chain(hip, o(72, 80), feet)
+        )
+    }
 }
 
 private val FIGURES: Map<Asana, Figure> = Asana.entries.associateWith(::figureFor)

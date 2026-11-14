@@ -214,6 +214,17 @@ class CoachEngine(
             Asana.VIRABHADRASANA_II -> "Warrior two"
             Asana.TRIKONASANA -> "Triangle"
             Asana.UTKATASANA -> "Chair"
+            Asana.VIRABHADRASANA_I -> "Warrior one"
+            Asana.UTTHITA_PARSVAKONASANA -> "Extended Side Angle"
+            Asana.ARDHA_CHANDRASANA -> "Half Moon"
+            Asana.MALASANA -> "Garland"
+            Asana.BADDHA_KONASANA -> "Butterfly"
+            Asana.SEATED_TWIST -> "Seated Twist"
+            Asana.NECK_RELEASES -> "Neck Releases"
+            Asana.ADHO_MUKHA_SVANASANA -> "Downward Dog"
+            Asana.BALASANA -> "Child's Pose"
+            Asana.VIPARITA_KARANI -> "Legs Up The Wall"
+            Asana.SAVASANA -> "Savasana"
         }
     }
 }

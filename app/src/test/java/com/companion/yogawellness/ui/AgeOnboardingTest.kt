@@ -67,8 +67,8 @@ class AgeOnboardingTest {
         val root = compose.activity.window.decorView.rootView
         val bmp = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
         root.draw(android.graphics.Canvas(bmp))
-        val dir = File("build/screenshots").apply { mkdirs() }
-        File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val target = File("build/screenshots", "$name.png").apply { parentFile?.mkdirs() }
+        target.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     private fun setScreen(content: @Composable () -> Unit) = compose.setContent { YogaWellnessTheme { content() } }

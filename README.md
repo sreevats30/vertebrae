@@ -482,15 +482,13 @@ Joint targets and angular tolerances are configured in [`AsanaSpecs.kt`](app/src
 The bottom bar has four tabs: **Home**, **Learn**, **History** and **Insights**. Practice, check-ins, questionnaires
 and Settings open full-screen without the bar.
 
-- **Live scoring covers exactly 4 poses:** Vrikshasana (Tree), Virabhadrasana II (Warrior II), Trikonasana
-  (Triangle) and Utkatasana (Chair). Tadasana (Mountain) is the calibration pose and is never scored. The camera
-  does not recognise any other pose.
+- **Live scoring covers 16 poses (15 scored + Tadasana calibration):** Standing (Tadasana, Vrikshasana, Virabhadrasana II, Trikonasana, Utkatasana, Virabhadrasana I, Utthita Parsvakonasana, Ardha Chandrasana, Malasana), Seated (Baddha Konasana, Seated Twist, Neck Releases), and Floor (Adho Mukha Svanasana, Balasana, Viparita Karani, Savasana).
 - **Learn** lists 32 poses in six everyday categories with search and filters (All, Live-scored, Desk, Morning,
   Standing, Balance, Hips, Evening). Each pose opens an animated stick-figure demo (no video, no images: it is drawn
   procedurally from joint angles) with Front / 45° / Side views, 0.5× / 1× speed, pause at the peak, angle callouts,
-  a breathing pacer, steps, common mistakes, easier options and a safety note. The 4 live poses have a
+  a breathing pacer, steps, common mistakes, easier options and a safety note. The live poses have a
   **Practice this live** button. It opens Practice with a "Target" hint, but scoring is the same for every pose.
-  The other 28 are follow-along demos only and are never scored or recorded. With *Remove animations* switched
+  The other 16 are follow-along demos. With *Remove animations* switched
   on in Android's accessibility settings, demos start paused at the peak pose.
 - **Automatic session saving:** every scored pose you hold (locked) for **at least 2.0 seconds** is saved, whatever
   its score. The session is checkpointed every 5 s and again when you press Home, lock the screen, switch camera or

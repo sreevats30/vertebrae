@@ -135,6 +135,10 @@ fun PracticeScreen(
     val ageNote = remember(targetAsana, ageBand) { practiceAgeNote(targetAsana, ageBand) }
     var showReplayPicker by remember { mutableStateOf(false) }
 
+    LaunchedEffect(targetAsana) {
+        vm.setTargetHint(targetAsana)
+    }
+
     state.message?.let { msg ->
         LaunchedEffect(msg) {
             delay(2500)
@@ -596,11 +600,11 @@ private fun FinishChip(onClick: () -> Unit) {
     }
 }
 
-/** Idle-panel hint for a target chosen in the Learn tab (all four poses are still detected). */
-fun targetHint(target: Asana): String =
-    "Move into ${target.displayName} when ready" +
-        (if (target.cameraAngle == CameraAngle.SIDE_OR_45) " (${target.cameraAngle.instruction.lowercase()})" else "") +
-        ". Any of the four poses is still detected."
+/** Idle-panel hint for a target chosen in the Learn tab. */
+fun targetHint(target: Asana): String {
+    val tip = com.companion.yogawellness.scoring.PoseRegistry.entryFor(target).setupTip
+    return "$tip. Move into ${target.displayName} when ready. All live poses are actively detected."
+}
 
 /** What the practice screen says about a target pose for an age band. */
 data class PracticeAgeNote(val band: AgeBand, val advice: PoseAdvice, val easierOption: String?)

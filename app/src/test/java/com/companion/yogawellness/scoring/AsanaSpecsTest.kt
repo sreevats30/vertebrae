@@ -7,9 +7,9 @@ import org.junit.Test
 class AsanaSpecsTest {
 
     @Test
-    fun rosterHasFiveAsanasWithFourScored() {
-        assertEquals(5, Asana.entries.size)
-        assertEquals(4, AsanaSpecs.scoredAsanas.size)
+    fun rosterHasSixteenAsanasWithFifteenScored() {
+        assertEquals(16, Asana.entries.size)
+        assertEquals(15, AsanaSpecs.scoredAsanas.size)
         assertTrue(AsanaSpecs.specsFor(Asana.TADASANA).isEmpty())
     }
 

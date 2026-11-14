@@ -1,13 +1,14 @@
 package com.companion.yogawellness.codex
 
 import com.companion.yogawellness.codex.CalloutJoint as J
+import com.companion.yogawellness.scoring.Asana
 
 internal val EVENING_POSES = listOf(
     AsanaCodexItem(
         id = "childs_pose", number = 29, sanskritName = "Balasana", englishName = "Child's Pose",
         category = AsanaCategory.EVENING, everydayBenefit = "Helps you slow down and lets the back relax",
         difficulty = Difficulty.BEGINNER, recommendedHoldSec = 45, breath = BreathPattern(4, 0, 6), defaultView = CodexView.SIDE,
-        liveAsana = null,
+        liveAsana = Asana.BALASANA,
         start = PoseAngles.TABLETOP,
         // Toes-tucked variation: with a rigid one-segment spine, the catalog's knee 35° / hip 40° cannot
         // also lay the shins flat, so knees, toes and forehead rest on the floor and the hands hover ~0.07 T.
@@ -77,7 +78,7 @@ internal val EVENING_POSES = listOf(
         difficulty = Difficulty.BEGINNER, recommendedHoldSec = 120, breath = BreathPattern(4, 0, 6),
         // 45° view: front or side alone hides either the body line or the arm/leg spread.
         defaultView = CodexView.DEG45,
-        liveAsana = null,
+        liveAsana = Asana.SAVASANA,
         start = PoseAngles.SUPINE,
         peak = PoseAngles(rootPitch = -90.0f, lShoulderAbd = 30.0f, rShoulderAbd = 30.0f, lHipAbd = 10.0f, rHipAbd = 10.0f),
         callouts = listOf(

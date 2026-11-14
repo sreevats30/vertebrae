@@ -50,9 +50,10 @@ object AlignmentScorer {
         var weightedSum = 0.0
         var activeWeightSum = 0.0
         var minCriticalScore = 100.0
-        val totalSpecWeight = specs.sumOf { it.weight }
+        val measurableSpecs = specs.filter { !it.notMeasured }
+        val totalSpecWeight = measurableSpecs.sumOf { it.weight }
 
-        for (spec in specs) {
+        for (spec in measurableSpecs) {
             val theta = smoothedAngles[spec.name] ?: Double.NaN
             if (theta.isNaN() || jointVisibilityOk[spec.name] != true) continue
 

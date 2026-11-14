@@ -11,7 +11,7 @@ internal val STANDING_POSES = listOf(
         id = "warrior_1", number = 13, sanskritName = "Virabhadrasana I", englishName = "Warrior I",
         category = AsanaCategory.STANDING, everydayBenefit = "Builds leg stamina and opens the chest",
         difficulty = Difficulty.BEGINNER, recommendedHoldSec = 30, breath = BreathPattern(4, 0, 4), defaultView = CodexView.DEG45,
-        liveAsana = null,
+        liveAsana = Asana.VIRABHADRASANA_I,
         start = PoseAngles.STANDING,
         // Back heel down: the back foot is flat (ankle dorsiflexed) with both feet on the floor.
         peak = PoseAngles(lShoulderFlex = 170.0f, rShoulderFlex = 170.0f, lHipFlex = 85.0f, lKneeFlex = 85.0f, rHipFlex = -55.6f, rKneeFlex = 5.0f,

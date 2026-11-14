@@ -146,7 +146,7 @@ object ReportPageRenderer {
             canvas.drawText("Practise both sides of Tree, Warrior II or Triangle to compare.", MARGIN, y + 9f, text(9.5f, C.inkSecondary))
             y += 14f
         }
-        data.symmetry.forEach { s ->
+        data.symmetry.take(4).forEach { s ->
             val line = "${s.asana.sanskritName} (${s.asana.englishName}): left ${f1(s.leftHoldSec)} s · right ${f1(s.rightHoldSec)} s" +
                 (s.holdSymmetryPct?.let { " · ${f0(it)}% symmetric" } ?: "")
             canvas.drawText(line, MARGIN, y + 9f, text(9.5f, C.inkPrimary))

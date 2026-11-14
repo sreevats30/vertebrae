@@ -47,5 +47,5 @@ object CodexText {
     const val GLOBAL_DISCLAIMER =
         "Not medical advice. Skip or modify any pose that causes pain, dizziness or joint strain, and check with a " +
             "clinician if you are pregnant or have an injury or condition."
-    const val FOLLOW_ALONG_NOTE = "Follow along with the demo. Live scoring is available for 4 poses."
+    const val FOLLOW_ALONG_NOTE = "Follow along with the demo. Live scoring is available for 16 poses."
 }

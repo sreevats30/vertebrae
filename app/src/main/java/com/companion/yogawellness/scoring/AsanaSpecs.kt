@@ -54,6 +54,61 @@ enum class Asana(
         "Chair Pose", "Utkatasana", CameraAngle.SIDE_OR_45, 0.15f,
         hasSides = false, isScored = true, maxHoldSec = 30,
         safetyRule = "Endurance & back guard: hold capped at 30 s or less; stop if lower back or knees ache"
+    ),
+    VIRABHADRASANA_I(
+        "Warrior I", "Virabhadrasana I", CameraAngle.SIDE_OR_45, 0.25f,
+        hasSides = true, isScored = true, maxHoldSec = null,
+        safetyRule = "Knee-over-ankle guard: front knee must not overshoot the front ankle"
+    ),
+    UTTHITA_PARSVAKONASANA(
+        "Extended Side Angle", "Utthita Parsvakonasana", CameraAngle.FRONT, 0.25f,
+        hasSides = true, isScored = true, maxHoldSec = null,
+        safetyRule = "Knee-over-ankle guard: front knee must not overshoot the front ankle"
+    ),
+    ARDHA_CHANDRASANA(
+        "Half Moon Pose", "Ardha Chandrasana", CameraAngle.FRONT, 0.25f,
+        hasSides = true, isScored = true, maxHoldSec = null,
+        safetyRule = "Hyperextension guard: standing knee must not exceed 182°"
+    ),
+    MALASANA(
+        "Garland Pose", "Malasana", CameraAngle.FRONT, 0.25f,
+        hasSides = false, isScored = true, maxHoldSec = null,
+        safetyRule = "Knee comfort: stop if your knees or hips pinch"
+    ),
+    BADDHA_KONASANA(
+        "Butterfly Pose", "Baddha Konasana", CameraAngle.FRONT, 0.25f,
+        hasSides = false, isScored = true, maxHoldSec = null,
+        safetyRule = "Hip guard: never push down on your knees with force"
+    ),
+    SEATED_TWIST(
+        "Seated Spinal Twist", "Bharadvajasana", CameraAngle.FRONT, 0.25f,
+        hasSides = true, isScored = true, maxHoldSec = null,
+        safetyRule = "Spine guard: keep torso upright and lead rotation from ribs"
+    ),
+    NECK_RELEASES(
+        "Neck Releases", "Kantha Sanchalana", CameraAngle.FRONT, 0.25f,
+        hasSides = true, isScored = true, maxHoldSec = null,
+        safetyRule = "Neck safety: keep shoulders relaxed; do not tip head backwards"
+    ),
+    ADHO_MUKHA_SVANASANA(
+        "Downward-Facing Dog", "Adho Mukha Svanasana", CameraAngle.SIDE_OR_45, 0.25f,
+        hasSides = false, isScored = true, maxHoldSec = null,
+        safetyRule = "Joint safety: avoid hyperextending elbows or knees"
+    ),
+    BALASANA(
+        "Child's Pose", "Balasana", CameraAngle.SIDE_OR_45, 0.25f,
+        hasSides = false, isScored = true, maxHoldSec = null,
+        safetyRule = "Knee safety: place hips toward heels gently without forcing knees"
+    ),
+    VIPARITA_KARANI(
+        "Legs-Up-The-Wall", "Viparita Karani", CameraAngle.SIDE_OR_45, 0.25f,
+        hasSides = false, isScored = true, maxHoldSec = null,
+        safetyRule = "Neck safety: keep neck neutral and head flat on the floor"
+    ),
+    SAVASANA(
+        "Mindful Corpse Relaxation", "Savasana", CameraAngle.SIDE_OR_45, 0.25f,
+        hasSides = false, isScored = true, maxHoldSec = null,
+        safetyRule = "Resting baseline: release all muscular tension and remain still"
     );
 
     val displayName: String get() = "$sanskritName ($englishName)"
@@ -136,7 +191,9 @@ data class JointSpec(
     val weight: Double,
     val isCritical: Boolean = false,
     val cueWhenTooLarge: String,
-    val cueWhenTooSmall: String
+    val cueWhenTooSmall: String,
+    val nearSideOnly: Boolean = false,
+    val notMeasured: Boolean = false
 )
 
 /** Complete master reference table (§7.2). */
@@ -312,12 +369,334 @@ object AsanaSpecs {
         )
     )
 
+    val VIRABHADRASANA_I: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Front Knee",
+            geometry = knee(front(BodyPart.HIP), front(BodyPart.KNEE), front(BodyPart.ANKLE)),
+            targetDeg = 95.0, toleranceDeg = 12.0, maxDeviationDeg = 30.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Bend your front knee closer to 90 degrees",
+            cueWhenTooSmall = "Ease up slightly so your knee stays above your ankle"
+        ),
+        JointSpec(
+            name = "Back Knee",
+            geometry = knee(back(BodyPart.HIP), back(BodyPart.KNEE), back(BodyPart.ANKLE)),
+            targetDeg = 172.0, toleranceDeg = 8.0, maxDeviationDeg = 30.0, weight = 0.25, isCritical = true,
+            cueWhenTooLarge = "Avoid hyperextending your back knee",
+            cueWhenTooSmall = "Straighten and anchor your back leg"
+        ),
+        JointSpec(
+            name = "Arm Elevation",
+            geometry = JointGeometry.BilateralAverage(BodyPart.HIP, BodyPart.SHOULDER, BodyPart.ELBOW),
+            targetDeg = 170.0, toleranceDeg = 15.0, maxDeviationDeg = 35.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Relax your shoulders away from ears",
+            cueWhenTooSmall = "Reach your arms higher overhead"
+        ),
+        JointSpec(
+            name = "Torso Upright",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 0.0, toleranceDeg = 12.0, maxDeviationDeg = 25.0, weight = 0.20, isCritical = false,
+            cueWhenTooLarge = "Bring your torso upright",
+            cueWhenTooSmall = "Center your chest over your hips"
+        )
+    )
+
+    val UTTHITA_PARSVAKONASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Front Knee",
+            geometry = knee(front(BodyPart.HIP), front(BodyPart.KNEE), front(BodyPart.ANKLE)),
+            targetDeg = 95.0, toleranceDeg = 12.0, maxDeviationDeg = 30.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Bend your front knee closer to 90 degrees",
+            cueWhenTooSmall = "Ease up slightly to protect your front knee"
+        ),
+        JointSpec(
+            name = "Back Knee",
+            geometry = knee(back(BodyPart.HIP), back(BodyPart.KNEE), back(BodyPart.ANKLE)),
+            targetDeg = 175.0, toleranceDeg = 8.0, maxDeviationDeg = 30.0, weight = 0.20, isCritical = false,
+            cueWhenTooLarge = "Avoid locking your back knee",
+            cueWhenTooSmall = "Straighten and ground your back leg"
+        ),
+        JointSpec(
+            name = "Trunk Lateral Tilt",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 60.0, toleranceDeg = 15.0, maxDeviationDeg = 32.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Come up slightly to keep spine extended",
+            cueWhenTooSmall = "Extend your torso sideways over your front thigh"
+        ),
+        JointSpec(
+            name = "Top Arm Line",
+            geometry = JointGeometry.ThreePoint(back(BodyPart.HIP), back(BodyPart.SHOULDER), back(BodyPart.WRIST)),
+            targetDeg = 170.0, toleranceDeg = 12.0, maxDeviationDeg = 35.0, weight = 0.20, isCritical = false,
+            cueWhenTooLarge = "Keep your top arm in a long diagonal line",
+            cueWhenTooSmall = "Reach your top arm extended over your ear"
+        )
+    )
+
+    val ARDHA_CHANDRASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Standing Knee",
+            geometry = knee(front(BodyPart.HIP), front(BodyPart.KNEE), front(BodyPart.ANKLE)),
+            targetDeg = 176.0, toleranceDeg = 6.0, maxDeviationDeg = 30.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Keep a micro-bend; do not hyperextend standing knee",
+            cueWhenTooSmall = "Straighten your standing leg"
+        ),
+        JointSpec(
+            name = "Lifted Knee",
+            geometry = knee(back(BodyPart.HIP), back(BodyPart.KNEE), back(BodyPart.ANKLE)),
+            targetDeg = 176.0, toleranceDeg = 8.0, maxDeviationDeg = 30.0, weight = 0.20, isCritical = false,
+            cueWhenTooLarge = "Avoid locking your lifted knee",
+            cueWhenTooSmall = "Reach actively through your lifted heel"
+        ),
+        JointSpec(
+            name = "Lifted Leg Elevation",
+            geometry = JointGeometry.SegmentVsVertical(back(BodyPart.HIP), back(BodyPart.ANKLE)),
+            targetDeg = 90.0, toleranceDeg = 12.0, maxDeviationDeg = 30.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Lower your lifted leg slightly to hip height",
+            cueWhenTooSmall = "Lift your back leg parallel to the floor"
+        ),
+        JointSpec(
+            name = "Trunk Lateral Tilt",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 80.0, toleranceDeg = 12.0, maxDeviationDeg = 30.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Keep torso parallel to the floor",
+            cueWhenTooSmall = "Hinge torso sideways toward horizontal"
+        )
+    )
+
+    val MALASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Left Knee Flexion",
+            geometry = knee(PointRef.Landmark(L.LEFT_HIP), PointRef.Landmark(L.LEFT_KNEE), PointRef.Landmark(L.LEFT_ANKLE)),
+            targetDeg = 55.0, toleranceDeg = 15.0, maxDeviationDeg = 35.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Lower into a comfortable deep squat",
+            cueWhenTooSmall = "Ease up if your knees feel compressed"
+        ),
+        JointSpec(
+            name = "Right Knee Flexion",
+            geometry = knee(PointRef.Landmark(L.RIGHT_HIP), PointRef.Landmark(L.RIGHT_KNEE), PointRef.Landmark(L.RIGHT_ANKLE)),
+            targetDeg = 55.0, toleranceDeg = 15.0, maxDeviationDeg = 35.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Lower into a comfortable deep squat",
+            cueWhenTooSmall = "Ease up if your knees feel compressed"
+        ),
+        JointSpec(
+            name = "Torso Upright",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 10.0, toleranceDeg = 15.0, maxDeviationDeg = 30.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Lengthen your spine; avoid rounding forward",
+            cueWhenTooSmall = "Lift your heart between your knees"
+        ),
+        JointSpec(
+            name = "Hands Together",
+            geometry = JointGeometry.BilateralAverage(BodyPart.SHOULDER, BodyPart.ELBOW, BodyPart.WRIST),
+            targetDeg = 160.0, toleranceDeg = 20.0, maxDeviationDeg = 40.0, weight = 0.15, isCritical = false,
+            cueWhenTooLarge = "Relax your shoulders",
+            cueWhenTooSmall = "Bring your palms together at your chest"
+        )
+    )
+
+    val BADDHA_KONASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Torso Upright",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 0.0, toleranceDeg = 12.0, maxDeviationDeg = 25.0, weight = 0.35, isCritical = true,
+            cueWhenTooLarge = "Sit tall with an erect spine",
+            cueWhenTooSmall = "Avoid rounding your lower back"
+        ),
+        JointSpec(
+            name = "Left Knee Flexion",
+            geometry = knee(PointRef.Landmark(L.LEFT_HIP), PointRef.Landmark(L.LEFT_KNEE), PointRef.Landmark(L.LEFT_ANKLE)),
+            targetDeg = 45.0, toleranceDeg = 20.0, maxDeviationDeg = 40.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Allow knees to release gently outward",
+            cueWhenTooSmall = "Do not force your knees down"
+        ),
+        JointSpec(
+            name = "Right Knee Flexion",
+            geometry = knee(PointRef.Landmark(L.RIGHT_HIP), PointRef.Landmark(L.RIGHT_KNEE), PointRef.Landmark(L.RIGHT_ANKLE)),
+            targetDeg = 45.0, toleranceDeg = 20.0, maxDeviationDeg = 40.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Allow knees to release gently outward",
+            cueWhenTooSmall = "Do not force your knees down"
+        ),
+        JointSpec(
+            name = "Shoulder Level",
+            geometry = JointGeometry.SegmentVsHorizontal(PointRef.Landmark(L.LEFT_SHOULDER), PointRef.Landmark(L.RIGHT_SHOULDER)),
+            targetDeg = 0.0, toleranceDeg = 8.0, maxDeviationDeg = 20.0, weight = 0.15, isCritical = false,
+            cueWhenTooLarge = "Keep shoulders level and relaxed",
+            cueWhenTooSmall = "Level your shoulders"
+        )
+    )
+
+    val SEATED_TWIST: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Spine Twist",
+            geometry = JointGeometry.SegmentVsHorizontal(PointRef.Landmark(L.LEFT_SHOULDER), PointRef.Landmark(L.RIGHT_SHOULDER)),
+            targetDeg = 50.0, toleranceDeg = 20.0, maxDeviationDeg = 35.0, weight = 0.40, isCritical = true,
+            cueWhenTooLarge = "Ease off the twist to protect lower back",
+            cueWhenTooSmall = "Rotate gently through your thoracic spine"
+        ),
+        JointSpec(
+            name = "Torso Upright",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 0.0, toleranceDeg = 12.0, maxDeviationDeg = 25.0, weight = 0.35, isCritical = true,
+            cueWhenTooLarge = "Sit tall with crown reaching up",
+            cueWhenTooSmall = "Keep spine upright while twisting"
+        ),
+        JointSpec(
+            name = "Shoulders Level",
+            geometry = JointGeometry.SegmentVsHorizontal(PointRef.Landmark(L.LEFT_SHOULDER), PointRef.Landmark(L.RIGHT_SHOULDER)),
+            targetDeg = 0.0, toleranceDeg = 8.0, maxDeviationDeg = 20.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Relax shoulders down away from ears",
+            cueWhenTooSmall = "Keep your shoulders level"
+        )
+    )
+
+    val NECK_RELEASES: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Head Tilt / Angle",
+            geometry = JointGeometry.ThreePoint(PointRef.NOSE, PointRef.MID_SHOULDER, PointRef.MID_HIP),
+            targetDeg = 25.0, toleranceDeg = 12.0, maxDeviationDeg = 30.0, weight = 0.40, isCritical = true,
+            cueWhenTooLarge = "Ease back slightly to a comfortable stretch",
+            cueWhenTooSmall = "Gently tilt or turn your head to release tension"
+        ),
+        JointSpec(
+            name = "Shoulders Level",
+            geometry = JointGeometry.SegmentVsHorizontal(PointRef.Landmark(L.LEFT_SHOULDER), PointRef.Landmark(L.RIGHT_SHOULDER)),
+            targetDeg = 0.0, toleranceDeg = 6.0, maxDeviationDeg = 20.0, weight = 0.35, isCritical = true,
+            cueWhenTooLarge = "Drop your shoulders away from your ears; do not shrug",
+            cueWhenTooSmall = "Keep both shoulders grounded and level"
+        ),
+        JointSpec(
+            name = "Torso Upright",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 0.0, toleranceDeg = 10.0, maxDeviationDeg = 25.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Sit tall with an upright posture",
+            cueWhenTooSmall = "Avoid leaning your torso"
+        )
+    )
+
+    val ADHO_MUKHA_SVANASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Arms Straight",
+            geometry = JointGeometry.BilateralAverage(BodyPart.SHOULDER, BodyPart.ELBOW, BodyPart.WRIST),
+            targetDeg = 172.0, toleranceDeg = 8.0, maxDeviationDeg = 30.0, weight = 0.25, isCritical = true,
+            cueWhenTooLarge = "Do not hyperextend your elbows",
+            cueWhenTooSmall = "Press into your palms and straighten your arms",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Legs Straight",
+            geometry = JointGeometry.BilateralAverage(BodyPart.HIP, BodyPart.KNEE, BodyPart.ANKLE),
+            targetDeg = 168.0, toleranceDeg = 12.0, maxDeviationDeg = 30.0, weight = 0.25, isCritical = false,
+            cueWhenTooLarge = "Keep a micro-bend in knees if hamstrings are tight",
+            cueWhenTooSmall = "Press your heels toward the mat and lengthen legs",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Hip Inverted V",
+            geometry = JointGeometry.BilateralAverage(BodyPart.SHOULDER, BodyPart.HIP, BodyPart.ANKLE),
+            targetDeg = 85.0, toleranceDeg = 15.0, maxDeviationDeg = 35.0, weight = 0.30, isCritical = true,
+            cueWhenTooLarge = "Lift your sitting bones up and back into an inverted V",
+            cueWhenTooSmall = "Press your hips back away from your shoulders",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Back Line",
+            geometry = JointGeometry.BilateralAverage(BodyPart.WRIST, BodyPart.SHOULDER, BodyPart.HIP),
+            targetDeg = 172.0, toleranceDeg = 10.0, maxDeviationDeg = 30.0, weight = 0.20, isCritical = false,
+            cueWhenTooLarge = "Keep ears between your upper arms",
+            cueWhenTooSmall = "Extend long through your spine",
+            nearSideOnly = true
+        )
+    )
+
+    val BALASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Torso Fold",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 80.0, toleranceDeg = 15.0, maxDeviationDeg = 30.0, weight = 0.40, isCritical = true,
+            cueWhenTooLarge = "Rest your forehead softly on the mat",
+            cueWhenTooSmall = "Fold your torso gently forward over your thighs",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Knee Flexion",
+            geometry = JointGeometry.BilateralAverage(BodyPart.HIP, BodyPart.KNEE, BodyPart.ANKLE),
+            targetDeg = 35.0, toleranceDeg = 15.0, maxDeviationDeg = 30.0, weight = 0.30, isCritical = false,
+            cueWhenTooLarge = "Relax your hips back toward your heels",
+            cueWhenTooSmall = "Allow your hips to settle onto your heels",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Arm Reach",
+            geometry = JointGeometry.BilateralAverage(BodyPart.HIP, BodyPart.SHOULDER, BodyPart.WRIST),
+            targetDeg = 165.0, toleranceDeg = 20.0, maxDeviationDeg = 40.0, weight = 0.30, isCritical = false,
+            cueWhenTooLarge = "Rest your arms forward comfortably",
+            cueWhenTooSmall = "Reach your fingertips forward to lengthen side body",
+            nearSideOnly = true
+        )
+    )
+
+    val VIPARITA_KARANI: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Legs Vertical",
+            geometry = JointGeometry.SegmentVsVertical(PointRef.MID_HIP, PointRef.Landmark(L.LEFT_ANKLE)),
+            targetDeg = 0.0, toleranceDeg = 10.0, maxDeviationDeg = 25.0, weight = 0.40, isCritical = true,
+            cueWhenTooLarge = "Rest legs vertically against the wall",
+            cueWhenTooSmall = "Stack your legs upright above your hips",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Knee Extension",
+            geometry = JointGeometry.BilateralAverage(BodyPart.HIP, BodyPart.KNEE, BodyPart.ANKLE),
+            targetDeg = 172.0, toleranceDeg = 10.0, maxDeviationDeg = 30.0, weight = 0.30, isCritical = false,
+            cueWhenTooLarge = "Allow a soft, relaxed bend in your knees",
+            cueWhenTooSmall = "Relax your legs straight upward",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Torso Flat",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 90.0, toleranceDeg = 12.0, maxDeviationDeg = 25.0, weight = 0.30, isCritical = false,
+            cueWhenTooLarge = "Keep your spine and shoulders relaxed flat on the floor",
+            cueWhenTooSmall = "Rest your torso flat",
+            nearSideOnly = true
+        )
+    )
+
+    val SAVASANA: List<JointSpec> = listOf(
+        JointSpec(
+            name = "Body Horizontal",
+            geometry = TORSO_VERTICAL,
+            targetDeg = 90.0, toleranceDeg = 10.0, maxDeviationDeg = 25.0, weight = 0.50, isCritical = true,
+            cueWhenTooLarge = "Lie flat and release all tension",
+            cueWhenTooSmall = "Rest fully on the floor",
+            nearSideOnly = true
+        ),
+        JointSpec(
+            name = "Legs Relaxed",
+            geometry = JointGeometry.BilateralAverage(BodyPart.HIP, BodyPart.KNEE, BodyPart.ANKLE),
+            targetDeg = 175.0, toleranceDeg = 10.0, maxDeviationDeg = 30.0, weight = 0.50, isCritical = false,
+            cueWhenTooLarge = "Release your leg muscles completely",
+            cueWhenTooSmall = "Let your feet fall naturally open",
+            nearSideOnly = true
+        )
+    )
+
     fun specsFor(asana: Asana): List<JointSpec> = when (asana) {
         Asana.TADASANA -> emptyList()
         Asana.VRIKSHASANA -> VRIKSHASANA
         Asana.VIRABHADRASANA_II -> VIRABHADRASANA_II
         Asana.TRIKONASANA -> TRIKONASANA
         Asana.UTKATASANA -> UTKATASANA
+        Asana.VIRABHADRASANA_I -> VIRABHADRASANA_I
+        Asana.UTTHITA_PARSVAKONASANA -> UTTHITA_PARSVAKONASANA
+        Asana.ARDHA_CHANDRASANA -> ARDHA_CHANDRASANA
+        Asana.MALASANA -> MALASANA
+        Asana.BADDHA_KONASANA -> BADDHA_KONASANA
+        Asana.SEATED_TWIST -> SEATED_TWIST
+        Asana.NECK_RELEASES -> NECK_RELEASES
+        Asana.ADHO_MUKHA_SVANASANA -> ADHO_MUKHA_SVANASANA
+        Asana.BALASANA -> BALASANA
+        Asana.VIPARITA_KARANI -> VIPARITA_KARANI
+        Asana.SAVASANA -> SAVASANA
     }
 
     val scoredAsanas: List<Asana> = Asana.entries.filter { it.isScored }

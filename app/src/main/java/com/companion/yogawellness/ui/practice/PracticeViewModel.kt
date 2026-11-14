@@ -21,6 +21,7 @@ import com.companion.yogawellness.replay.DemoClips
 import com.companion.yogawellness.replay.LandmarkRecorder
 import com.companion.yogawellness.replay.LandmarkReplayer
 import com.companion.yogawellness.replay.PoseClip
+import com.companion.yogawellness.scoring.Asana
 import com.companion.yogawellness.scoring.ToleranceProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -72,6 +73,10 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
     private val frames = Channel<PoseFrame>(Channel.CONFLATED)
     private var lastFrameMs = -1L
     private var replayJob: Job? = null
+
+    fun setTargetHint(target: Asana?) {
+        pipeline.targetHint = target
+    }
 
     private val _state = MutableStateFlow(
         PracticeUiState(
