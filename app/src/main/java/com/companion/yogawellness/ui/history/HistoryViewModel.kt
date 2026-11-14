@@ -9,6 +9,8 @@ import com.companion.yogawellness.YogaWellnessApp
 import com.companion.yogawellness.data.ActiveProfile
 import com.companion.yogawellness.data.ProfileIds
 import com.companion.yogawellness.data.WellnessRepository
+import com.companion.yogawellness.motor.MentalWellnessReport
+import com.companion.yogawellness.motor.WellnessHistoryStore
 import com.companion.yogawellness.wellness.HistoryAggregator
 import com.companion.yogawellness.wellness.HistorySummary
 import com.companion.yogawellness.wellness.SessionWithPoses
@@ -32,8 +34,12 @@ data class HistoryUiState(
 
 class HistoryViewModel(
     private val repo: WellnessRepository,
-    private val activeProfile: ActiveProfile
+    private val activeProfile: ActiveProfile,
+    private val wellnessHistory: WellnessHistoryStore? = null
 ) : ViewModel() {
+
+    /** The session's Mental Wellness & Motor report (stored, or estimated for older sessions). */
+    fun reportFor(item: SessionWithPoses): MentalWellnessReport? = wellnessHistory?.reportFor(item)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<HistoryUiState> = activeProfile.id
@@ -55,7 +61,7 @@ class HistoryViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as YogaWellnessApp
-                HistoryViewModel(app.repository, app.activeProfile)
+                HistoryViewModel(app.repository, app.activeProfile, app.wellnessHistory)
             }
         }
     }

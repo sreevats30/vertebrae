@@ -26,7 +26,13 @@ data class ReceiptPose(
     val meanScore: Double?
 )
 
-data class SessionReceipt(val poses: List<ReceiptPose>, val totalSec: Double, val meanScore: Double?)
+data class SessionReceipt(
+    val poses: List<ReceiptPose>,
+    val totalSec: Double,
+    val meanScore: Double?,
+    /** Same value as the saved PracticeSessionEntity.startedAtMs (keys the wellness report). */
+    val startedAtMs: Long = 0L
+)
 
 /**
  * Saves the live practice session continuously so nothing is lost to Home presses, screen lock,
@@ -136,6 +142,7 @@ class SessionAutoRecorder(
     fun finalizeAndRotate(segments: List<PoseSegmentStats>, toleranceProfile: String): SessionReceipt? {
         val now = clock()
         val kept = SessionSummarizer.qualifying(segments)
+        val sessionStartedAtMs: Long
         synchronized(lock) {
             val old = handle
             handle = Handle() // the next session can never reuse the old row id
@@ -144,6 +151,7 @@ class SessionAutoRecorder(
             retryNeeded = false
             _rec.value = Rec()
             if (old.startedAtMs < 0) old.startedAtMs = now
+            sessionStartedAtMs = old.startedAtMs
             if (kept.isNotEmpty()) scheduleWriteLocked(old, segments, toleranceProfile, now, final = true)
         }
         if (kept.isEmpty()) return null
@@ -160,7 +168,8 @@ class SessionAutoRecorder(
                 )
             },
             totalSec = total,
-            meanScore = if (scored.isEmpty()) null else scored.sumOf { it.meanScore!! * it.lockedSec } / scored.sumOf { it.lockedSec }
+            meanScore = if (scored.isEmpty()) null else scored.sumOf { it.meanScore!! * it.lockedSec } / scored.sumOf { it.lockedSec },
+            startedAtMs = sessionStartedAtMs
         )
     }
 

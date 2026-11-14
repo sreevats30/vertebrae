@@ -38,6 +38,11 @@ class YogaWellnessApp : Application() {
     /** Continuous live-session saving; writes run on [appScope], never on the camera thread. */
     val sessionRecorder: SessionAutoRecorder by lazy { SessionAutoRecorder(repository, appScope) }
 
+    /** Per-session Mental Wellness & Motor reports (SharedPreferences JSON; no Room migration). */
+    val wellnessHistory: com.companion.yogawellness.motor.WellnessHistoryStore by lazy {
+        com.companion.yogawellness.motor.WellnessHistoryStore(this)
+    }
+
     /** App-specific external storage: private to the app, but reachable with `adb pull` for tuning. */
     val recordingsDir: File get() = File(getExternalFilesDir(null) ?: filesDir, "recordings")
 

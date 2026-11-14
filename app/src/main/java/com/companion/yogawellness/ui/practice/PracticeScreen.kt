@@ -1,5 +1,8 @@
 package com.companion.yogawellness.ui.practice
 
+import androidx.compose.material.icons.rounded.Psychology
+import com.companion.yogawellness.ui.components.MindStateChip
+import com.companion.yogawellness.ui.components.WellnessReportSheet
 import androidx.compose.material.icons.rounded.Accessibility
 import com.companion.yogawellness.codex.AsanaCatalog32
 import com.companion.yogawellness.codex.Suitability
@@ -218,10 +221,15 @@ fun PracticeScreen(
                             tint = if (state.recordingSec != null) Color.White else ScoreColors.Red
                         )
                     }
+                    if (state.lastWellnessReport != null) {
+                        HudIconButton(Icons.Rounded.Psychology, "View last wellness report", vm::showLastWellnessReport, bare = true, tint = Brand.Mint)
+                    }
                     HudIconButton(Icons.Rounded.Replay, "Replay a clip", { showReplayPicker = true }, bare = true)
                     HudIconButton(Icons.Rounded.Cameraswitch, "Switch camera", vm::toggleCamera, bare = true)
                 }
             }
+            // Live motor-to-emotion read-out (tremor, sway, smoothness, hold stability).
+            state.mind?.let { MindStateChip(it) }
             targetAsana?.let { TargetChip(it) }
             // Shown before the pre-flight checks; informs only — detection and scoring start regardless.
             if (ageNote != null && showAgeNote) AgeCautionBanner(ageNote) { showAgeNote = false }
@@ -250,7 +258,11 @@ fun PracticeScreen(
     if (showExplain) {
         ExplainScoreSheet(state.output, state.profile) { showExplain = false }
     }
-    state.receipt?.let { receipt ->
+    // Mental Wellness Report opens first when a session ends; the receipt follows on Continue.
+    state.wellnessReport?.let { report ->
+        WellnessReportSheet(report, onDismiss = vm::closeWellnessReport, subtitle = "This session")
+    }
+    if (state.wellnessReport == null) state.receipt?.let { receipt ->
         SessionReceiptDialog(
             receipt = receipt,
             onViewHistory = { vm.clearReceipt(); onFinished() },

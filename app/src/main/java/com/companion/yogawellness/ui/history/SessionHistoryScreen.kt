@@ -76,6 +76,11 @@ import com.companion.yogawellness.ui.theme.Brand
 import com.companion.yogawellness.ui.theme.NumericStyle
 import com.companion.yogawellness.ui.theme.OverlineStyle
 import com.companion.yogawellness.wellness.HistoryAggregator
+import com.companion.yogawellness.motor.MentalWellnessReport
+import com.companion.yogawellness.ui.components.WellnessBadgeRow
+import com.companion.yogawellness.ui.components.WellnessReportSheet
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Psychology
 import com.companion.yogawellness.wellness.HistorySummary
 import com.companion.yogawellness.wellness.SessionWithPoses
 import java.time.Instant
@@ -109,6 +114,7 @@ fun SessionHistoryScreen(
         state = state,
         onStartPractice = onStartPractice,
         onDelete = vm::deleteSession,
+        reportFor = vm::reportFor,
         header = {
             ProfileSelectorBar()
             DemoBannerBar()
@@ -121,9 +127,12 @@ fun SessionHistoryContent(
     state: HistoryUiState,
     onStartPractice: () -> Unit,
     onDelete: (Long) -> Unit,
-    header: @Composable () -> Unit = {}
+    header: @Composable () -> Unit = {},
+    /** Mental Wellness & Motor report for a session (null hides the wellness row). */
+    reportFor: (SessionWithPoses) -> MentalWellnessReport? = { null }
 ) {
     var confirmDelete by remember { mutableStateOf<PracticeSessionEntity?>(null) }
+    var openReport by remember { mutableStateOf<Pair<MentalWellnessReport, Long>?>(null) }
     val expanded = remember { mutableStateListOf<Long>() }
 
     Scaffold(
@@ -167,8 +176,11 @@ fun SessionHistoryContent(
                 }
                 items(state.sessions, key = { it.session.id }) { item ->
                     val id = item.session.id
+                    val report = remember(item.session.startedAtMs, item.session.endedAtMs) { reportFor(item) }
                     SessionCard(
                         item = item,
+                        report = report,
+                        onOpenReport = { r -> openReport = r to item.session.startedAtMs },
                         expanded = id in expanded,
                         onToggle = { if (id in expanded) expanded.remove(id) else expanded.add(id) },
                         onDelete = if (state.canEdit) ({ confirmDelete = item.session }) else null
@@ -176,6 +188,10 @@ fun SessionHistoryContent(
                 }
             }
         }
+    }
+
+    openReport?.let { (r, startedAt) ->
+        WellnessReportSheet(r, onDismiss = { openReport = null }, subtitle = formatSessionTime(startedAt))
     }
 
     confirmDelete?.let { s ->
@@ -301,7 +317,14 @@ private fun DateBadge(startedAtMs: Long, accent: Color) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SessionCard(item: SessionWithPoses, expanded: Boolean, onToggle: () -> Unit, onDelete: (() -> Unit)?) {
+private fun SessionCard(
+    item: SessionWithPoses,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onDelete: (() -> Unit)?,
+    report: MentalWellnessReport? = null,
+    onOpenReport: (MentalWellnessReport) -> Unit = {}
+) {
     val s = item.session
     val manual = s.source == PracticeSessionEntity.SOURCE_MANUAL
     val when_ = formatSessionTime(s.startedAtMs)
@@ -349,6 +372,7 @@ private fun SessionCard(item: SessionWithPoses, expanded: Boolean, onToggle: () 
                 }
             }
         }
+        report?.let { r -> WellnessHistoryRow(r) { onOpenReport(r) } }
         if (expanded) {
             Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 HorizontalDivider(color = AppTheme.colors.hairline)
@@ -358,6 +382,40 @@ private fun SessionCard(item: SessionWithPoses, expanded: Boolean, onToggle: () 
                 item.poses.forEach { PoseRow(it) }
             }
         }
+    }
+}
+
+/** "Mental Wellness & Motor Report" strip on a History card; tap opens the full report. */
+@Composable
+private fun WellnessHistoryRow(report: MentalWellnessReport, onOpen: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppTheme.colors.well)
+            .border(1.dp, AppTheme.colors.wellBorder, RoundedCornerShape(16.dp))
+            .clickable(role = Role.Button, onClickLabel = "Open wellness report", onClick = onOpen)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Rounded.Psychology, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+            Text(
+                "MENTAL WELLNESS & MOTOR REPORT",
+                style = OverlineStyle,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f)
+            )
+            if (report.estimated) Text("Estimated", style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.inkMuted)
+            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = AppTheme.colors.inkMuted, modifier = Modifier.size(18.dp))
+        }
+        WellnessBadgeRow(report)
+        Text(
+            if (report.stress >= report.calm) report.stressReason else report.calmReason,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppTheme.colors.inkMuted
+        )
     }
 }
 

@@ -7,6 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.companion.yogawellness.YogaWellnessApp
 import com.companion.yogawellness.data.SessionAutoRecorder
 import com.companion.yogawellness.data.SessionReceipt
+import com.companion.yogawellness.data.LiveMindState
+import com.companion.yogawellness.motor.EmotionEstimate
+import com.companion.yogawellness.motor.EmotionEstimator
+import com.companion.yogawellness.motor.LiveEmotionSmoother
+import com.companion.yogawellness.motor.MentalWellnessReport
+import com.companion.yogawellness.motor.MotorFeatureExtractor
 import com.companion.yogawellness.pose.PipelineEvent
 import com.companion.yogawellness.camera.AccelerometerMonitor
 import com.companion.yogawellness.camera.PoseLandmarkerHelper
@@ -49,7 +55,13 @@ data class PracticeUiState(
     /** Live-session recording state (REC badge). */
     val rec: SessionAutoRecorder.Rec = SessionAutoRecorder.Rec(),
     /** Set after "Finish & Save" when something was recorded. */
-    val receipt: SessionReceipt? = null
+    val receipt: SessionReceipt? = null,
+    /** Live motor-to-emotion read-out for the Mind-State chip (null until motion is read). */
+    val mind: EmotionEstimate? = null,
+    /** Post-session Mental Wellness Report, shown automatically after "Finish & Save". */
+    val wellnessReport: MentalWellnessReport? = null,
+    /** Last finished report, reachable from the "View last wellness report" HUD button. */
+    val lastWellnessReport: MentalWellnessReport? = null
 ) {
     val isReplaying: Boolean get() = replayName != null
 }
@@ -70,6 +82,10 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
     val recorder = LandmarkRecorder(container.recordingsDir)
     /** Continuous saving of the live session (app-scoped; survives this ViewModel). */
     private val sessionRecorder: SessionAutoRecorder = container.sessionRecorder
+    /** Motor-control signals -> live emotion (runs on [pipelineDispatcher], never the camera thread). */
+    private val motor = MotorFeatureExtractor()
+    private val mindSmoother = LiveEmotionSmoother()
+    private val wellnessHistory = container.wellnessHistory
     private val frames = Channel<PoseFrame>(Channel.CONFLATED)
     private var lastFrameMs = -1L
     private var replayJob: Job? = null
@@ -82,7 +98,8 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
         PracticeUiState(
             useFrontCamera = prefs.useFrontCamera,
             profile = prefs.toleranceProfile,
-            voiceEnabled = prefs.voiceCoachEnabled
+            voiceEnabled = prefs.voiceCoachEnabled,
+            lastWellnessReport = LiveMindState.latestReport.value
         )
     )
     val state: StateFlow<PracticeUiState> = _state.asStateFlow()
@@ -122,6 +139,11 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
     private fun process(frame: PoseFrame, sensors: SensorSnapshot?, record: Boolean) {
         val out = pipeline.process(frame, sensors)
         coach.onOutput(out)
+        val motorSnap = motor.update(frame, sensors, out.lockedLabel, out.hold, out.holdCapSec)
+        val mind = if (motorSnap.valid || motorSnap.phoneMoving) {
+            mindSmoother.update(EmotionEstimator.estimate(motorSnap), frame.timestampMs)
+        } else null
+        LiveMindState.publish(motorSnap, mind)
         if (record) {
             // Live frames only: replays are never recorded.
             if (out.events.any { it is PipelineEvent.CalibrationComplete }) sessionRecorder.markActive()
@@ -142,6 +164,7 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
             val instFps = if (dt > 0) 1000.0 / dt else s.fps
             s.copy(
                 output = out,
+                mind = mind,
                 fps = if (s.fps == 0.0) instFps else 0.9 * s.fps + 0.1 * instFps,
                 recordingSec = recordingSec
             )
@@ -152,8 +175,25 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
      * Saves the live session so far and starts a new one. The segment snapshot is taken here,
      * before any pipeline reset. Writes happen on the app scope.
      */
-    private fun finalizeSession(): SessionReceipt? =
-        sessionRecorder.finalizeAndRotate(pipeline.session.segments(), pipeline.toleranceProfile.name)
+    private fun finalizeSession(): SessionReceipt? {
+        val receipt = sessionRecorder.finalizeAndRotate(pipeline.session.segments(), pipeline.toleranceProfile.name)
+        // Same moment the session row is written: build + persist its wellness report.
+        if (receipt != null) {
+            val agg = motor.aggregate()
+            if (agg.hasData) {
+                val report = EmotionEstimator.report(receipt.startedAtMs, agg)
+                wellnessHistory.save(report)
+                LiveMindState.setLatestReport(report)
+                _state.update { it.copy(lastWellnessReport = report) }
+                return receipt.also { pendingReport = report }
+            }
+        }
+        pendingReport = null
+        return receipt
+    }
+
+    /** Report produced by the latest [finalizeSession], shown by [finishAndSave]. */
+    private var pendingReport: MentalWellnessReport? = null
 
     /** Lifecycle ON_STOP (Home, screen lock): persist now, keep the session open. */
     fun checkpointNow() {
@@ -169,7 +209,7 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
             resetPipeline()
             if (receipt != null) {
                 container.activeProfile.returnToMyAccount() // the saved session is in My Account
-                _state.update { it.copy(receipt = receipt, output = null) }
+                _state.update { it.copy(receipt = receipt, output = null, mind = null, wellnessReport = pendingReport) }
             } else {
                 _state.update { it.copy(message = HOLD_TO_RECORD_MESSAGE) }
             }
@@ -178,9 +218,18 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearReceipt() = _state.update { it.copy(receipt = null) }
 
+    /** Closes the Mental Wellness Report sheet (the session receipt, if any, shows next). */
+    fun closeWellnessReport() = _state.update { it.copy(wellnessReport = null) }
+
+    /** "View last wellness report" from the HUD. */
+    fun showLastWellnessReport() = _state.update { s -> s.copy(wellnessReport = s.lastWellnessReport) }
+
     private fun resetPipeline() {
         pipeline.reset()
         coach.reset()
+        motor.reset()
+        mindSmoother.reset()
+        LiveMindState.clearLive()
         lastFrameMs = -1L
     }
 
