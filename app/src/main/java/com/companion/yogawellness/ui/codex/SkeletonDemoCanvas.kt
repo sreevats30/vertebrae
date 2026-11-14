@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,20 +71,26 @@ class DemoPalette(
     val pillText: Color
 )
 
-/** The 3D viewer: a recessed viewport, light bones, jade at the hold, amber angle arcs. */
-object DemoColors {
-    val Background = Color(0xFF151514)
-    val Viewer = DemoPalette(
-        background = Background,
-        backgroundTop = Color(0xFF1B1B19),
-        peakBone = Color(0xFF6DBE98),
-        movingBone = Color(0xFFBDBAB2),
-        joint = Color(0xFFEEECE7),
-        floor = Color(0xFF3B3A37),
-        plumb = Color(0x59EEECE7),
-        arc = Color(0xFFE2AE52),
-        pillBg = Color(0xE6000000),
-        pillText = Color(0xFFEEECE7)
+/**
+ * The 3D viewer: a recessed viewport, light bones, green at the hold, amber angle arcs. Built from
+ * the theme tokens (read here, in composition, never inside DrawScope), so it follows the palette.
+ * The hold green and arc amber are the semantic `accent` / `warning`, identical in every palette.
+ */
+@Composable
+@ReadOnlyComposable
+fun viewerPalette(): DemoPalette {
+    val c = AppTheme.colors
+    return DemoPalette(
+        background = c.raised,
+        backgroundTop = c.control,
+        peakBone = c.accent,
+        movingBone = c.textSecondary,
+        joint = c.text,
+        floor = c.lineStrong,
+        plumb = c.textTertiary,
+        arc = c.warning,
+        pillBg = c.canvas.copy(alpha = 0.9f),
+        pillText = c.text
     )
 }
 
@@ -324,7 +331,7 @@ fun DrawScope.drawDemoFrame(
     style: DemoStyle?,
     labels: List<TextLayoutResult>?,
     showPlumb: Boolean,
-    palette: DemoPalette = DemoColors.Viewer
+    palette: DemoPalette
 ) {
     val w = size.width
     val h = size.height
@@ -486,9 +493,13 @@ fun SkeletonDemoCanvas(
         }
     }
 
+    val palette = viewerPalette()
+    val backdrop = remember(palette.backgroundTop, palette.background) {
+        Brush.verticalGradient(listOf(palette.backgroundTop, palette.background))
+    }
     val measurer = rememberTextMeasurer()
-    val labels = remember(item, density) {
-        val ts = TextStyle(color = DemoColors.Viewer.pillText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = Inter)
+    val labels = remember(item, density, palette.pillText) {
+        val ts = TextStyle(color = palette.pillText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = Inter)
         calloutValueLabels(item).map { measurer.measure(it, ts) }
     }
     val style = remember(density) {
@@ -508,11 +519,11 @@ fun SkeletonDemoCanvas(
         modifier
             .aspectRatio(4f / 5f)
             .clip(RoundedCornerShape(10.dp))
-            .background(Brush.verticalGradient(listOf(DemoColors.Viewer.backgroundTop, DemoColors.Viewer.background)))
+            .background(backdrop)
             .semantics { contentDescription = description }
     ) {
         if (version < 0) return@Canvas // draw-phase read: redraw on every solved frame
-        drawDemoFrame(frame, style, if (showAngles) labels else null, showPlumb = true)
+        drawDemoFrame(frame, style, if (showAngles) labels else null, showPlumb = true, palette = palette)
     }
 }
 

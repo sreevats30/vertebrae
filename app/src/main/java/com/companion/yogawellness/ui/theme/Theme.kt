@@ -1,28 +1,43 @@
 package com.companion.yogawellness.ui.theme
 
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /*
- * Design system — "Practice room"
+ * Design system: two palettes over the same [AppColors] tokens (see COLOUR_GUIDE.md).
  *
- * A dark, warm-neutral interface: the app is used with the phone propped up across a room, often in
- * low light, and the camera screen is dark by nature, so every screen shares one dark identity.
+ *  - [Twilight] (default, [YogaWellnessTheme]): the front pages (Home, Learn, History, Insights,
+ *    check-ins, questionnaires, consent, Settings). Calm, low-vividness cool blue-green neutrals and
+ *    soft off-white text. Built with `Ink.copy(...)`, so it can only differ in neutrals, text, the
+ *    primary-action fill and the muted semantic fills.
+ *  - [Ink] (original, [DetectionTheme]): the pose-detection screens (the Practice route, its camera
+ *    HUD, pose overlay, score explainer and recording UI). Warm near-black neutrals, ivory action
+ *    colour. Do not edit: Practice must stay pixel-identical.
  *
- *  - Neutrals are warm (ink, not slate) so the UI reads calm rather than technical.
- *  - Ivory is the action colour: primary buttons and the selected option of a selector.
- *  - Jade means "on target": active state, progress, aligned joints, positive results.
- *  - Amber and coral are reserved for caution and problems. Data series have their own hues and are
- *    only used inside charts and meters.
+ * In both palettes:
+ *  - Green / amber / red keep exactly the same values ([ScoreColors], accent, warning, negative):
+ *    green = on target / correct, amber = caution, red = problem / incorrect.
+ *  - `inverse` is the action colour: primary buttons and the selected option of a selector.
+ *  - Data series have their own hues and are only used inside charts and meters.
  *  - Surfaces are mostly the page itself. Raised surfaces are kept for sheets, dialogs, media tiles
  *    and controls; content is separated by spacing and hairlines rather than cards.
  */
@@ -71,7 +86,11 @@ data class AppColors(
     val quality: Color
 )
 
-private val Ink = AppColors(
+/**
+ * Original warm "practice room" palette. Used only by [DetectionTheme] (the Practice route).
+ * Do not change any value here: ThemeContrastTest pins every token.
+ */
+internal val Ink = AppColors(
     canvas = Color(0xFF0E0E0D),
     raised = Color(0xFF171716),
     control = Color(0xFF1F1F1D),
@@ -97,7 +116,38 @@ private val Ink = AppColors(
     quality = Color(0xFFD4B77F)
 )
 
-private val LocalAppColors = staticCompositionLocalOf { Ink }
+/**
+ * Calm front-page palette (COLOUR_GUIDE.md §3). Only neutrals, text, `inverse`/`onInverse` and the
+ * three muted fills differ from [Ink]; every semantic and data-series colour is inherited unchanged.
+ * Contrast thresholds are asserted in ThemeContrastTest.
+ */
+internal val Twilight = Ink.copy(
+    canvas = Color(0xFF0F1719),
+    raised = Color(0xFF161E22),
+    control = Color(0xFF1D272C),
+    // Lighter values push red below 4.5:1 (#243036 gives 4.46).
+    controlHigh = Color(0xFF232F35),
+    line = Color(0xFF243038),
+    // >= 3:1 on canvas, raised and control (outlines that identify a control).
+    lineStrong = Color(0xFF637680),
+    text = Color(0xFFE8EEEC),
+    textSecondary = Color(0xFFA9B7B8),
+    // >= 4.5:1 on canvas, raised, control and controlHigh.
+    textTertiary = Color(0xFF8B9CA4),
+    textDisabled = Color(0xFF55636A),
+    inverse = Color(0xFFDCE9E4),
+    onInverse = Color(0xFF0F1719),
+    // Semantic colour at 12% over `raised`. Do not go above 12%: red on negativeMuted is 4.54:1 at
+    // 15% and 4.30:1 at 18%.
+    accentMuted = Color(0xFF203130),
+    warningMuted = Color(0xFF2E2F28),
+    negativeMuted = Color(0xFF2F2829)
+)
+
+/** Alpha of the semantic colour in the Twilight muted fills (asserted in ThemeContrastTest). */
+internal const val TWILIGHT_MUTED_ALPHA = 0.12f
+
+private val LocalAppColors = staticCompositionLocalOf { Twilight }
 
 private fun scheme(c: AppColors) = darkColorScheme(
     primary = c.accent, onPrimary = c.onAccent, primaryContainer = c.accentMuted, onPrimaryContainer = c.accent,
@@ -141,12 +191,71 @@ private val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(Radius.L)
 )
 
-/** The app is dark-only: one identity across the camera screen and everything around it. */
+private val TwilightScheme = scheme(Twilight)
+private val InkScheme = scheme(Ink)
+
+/**
+ * Applies [colors] to both the app tokens ([AppTheme.colors]) and Material 3, so M3 sheets,
+ * dialogs, inputs, switches and ripples match the palette.
+ */
 @Composable
-fun YogaWellnessTheme(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalAppColors provides Ink) {
-        MaterialTheme(colorScheme = scheme(Ink), typography = AppTypography, shapes = AppShapes, content = content)
+private fun PaletteTheme(colors: AppColors, colorScheme: ColorScheme, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalAppColors provides colors) {
+        MaterialTheme(colorScheme = colorScheme, typography = AppTypography, shapes = AppShapes, content = content)
     }
+}
+
+/** Default theme: the calm [Twilight] palette for every front page. The app is dark-only. */
+@Composable
+fun YogaWellnessTheme(content: @Composable () -> Unit) = PaletteTheme(Twilight, TwilightScheme, content)
+
+/**
+ * The original [Ink] palette for pose detection. AppNavHost wraps only the Practice route in it, so
+ * Practice, its camera HUD, pose overlay, score explainer, recording UI and every sheet or dialog it
+ * opens look exactly as they did before Twilight, without any change to those files.
+ *
+ * Content colour defaults to Ink's text, as the app Scaffold supplied before Practice was nested in a
+ * Twilight scaffold (translucent HUD surfaces and their ripples fall back to it). While Practice is on
+ * screen the system bars use Ink's canvas; the colours active before are restored when it leaves.
+ */
+@Composable
+fun DetectionTheme(content: @Composable () -> Unit) {
+    DetectionSystemBars()
+    PaletteTheme(Ink, InkScheme) {
+        CompositionLocalProvider(LocalContentColor provides Ink.text, content = content)
+    }
+}
+
+/**
+ * Sets the status and navigation bars to Ink's canvas (#0E0E0D) on entry, through the same
+ * `enableEdgeToEdge` + [SystemBarStyle] set-up as MainActivity, and restores the colours that were
+ * active on entry when Practice leaves composition.
+ *
+ * On Android 15+ (targetSdk 35) the platform ignores bar colours and keeps the bars transparent, so
+ * there this is a no-op and the bars show the Practice content behind them, as before.
+ */
+@Composable
+private fun DetectionSystemBars() {
+    val activity = LocalContext.current.findComponentActivity() ?: return
+    DisposableEffect(activity) {
+        val window = activity.window
+        @Suppress("DEPRECATION") val previousStatus = window.statusBarColor
+        @Suppress("DEPRECATION") val previousNavigation = window.navigationBarColor
+        val ink = Ink.canvas.toArgb()
+        activity.enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(ink), navigationBarStyle = SystemBarStyle.dark(ink))
+        onDispose {
+            activity.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(previousStatus),
+                navigationBarStyle = SystemBarStyle.dark(previousNavigation)
+            )
+        }
+    }
+}
+
+private tailrec fun Context.findComponentActivity(): ComponentActivity? = when (this) {
+    is ComponentActivity -> this
+    is ContextWrapper -> baseContext.findComponentActivity()
+    else -> null
 }
 
 /** The app's colour tokens: `AppTheme.colors.textSecondary`. */

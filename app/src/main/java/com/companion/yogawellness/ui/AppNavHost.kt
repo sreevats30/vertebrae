@@ -64,6 +64,7 @@ import com.companion.yogawellness.ui.home.HomeScreen
 import com.companion.yogawellness.ui.practice.PracticeScreen
 import com.companion.yogawellness.ui.settings.SettingsScreen
 import com.companion.yogawellness.ui.theme.AppTheme
+import com.companion.yogawellness.ui.theme.DetectionTheme
 import com.companion.yogawellness.ui.wellness.CheckInScreen
 import com.companion.yogawellness.ui.wellness.QuestionnaireScreen
 import com.companion.yogawellness.ui.wellness.WellnessViewModel
@@ -217,17 +218,21 @@ fun AppNavHost(nav: NavHostController = rememberNavController()) {
                 arguments = listOf(navArgument("asana") { type = NavType.StringType; nullable = true; defaultValue = null })
             ) { entry ->
                 val target = entry.arguments?.getString("asana")?.let { n -> Asana.entries.firstOrNull { it.name == n && it.isScored } }
-                PracticeScreen(
-                    targetAsana = target,
-                    onBack = { nav.popBackStack() },
-                    onFinished = {
-                        // Pop Practice for good (no saveState) so its camera/model resources are released.
-                        nav.navigate(Routes.HISTORY) {
-                            popUpTo(Routes.PRACTICE) { inclusive = true }
-                            launchSingleTop = true
+                // Pose detection keeps the original Ink palette (camera HUD, overlay, score sheet,
+                // dialogs); every other route uses the default Twilight palette. See COLOUR_GUIDE.md.
+                DetectionTheme {
+                    PracticeScreen(
+                        targetAsana = target,
+                        onBack = { nav.popBackStack() },
+                        onFinished = {
+                            // Pop Practice for good (no saveState) so its camera/model resources are released.
+                            nav.navigate(Routes.HISTORY) {
+                                popUpTo(Routes.PRACTICE) { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
             composable(Routes.CHECK_IN) { CheckInScreen(onDone = { nav.popBackStack() }) }
             composable(Routes.QUESTIONNAIRE) { entry ->

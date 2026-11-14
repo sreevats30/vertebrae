@@ -191,8 +191,11 @@ private fun TrendChart(weeks: List<WeeklyRow>) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val typeface = remember { runCatching { ResourcesCompat.getFont(context, R.font.inter_regular) }.getOrNull() }
-    val renderer = remember(density, typeface) {
-        TrendChartRenderer(ChartColors.Dark, density.density, density.density * density.fontScale, typeface)
+    // Theme tokens are read here, in composition, and handed to the Canvas renderer.
+    val tokens = AppTheme.colors
+    val chartColors = remember(tokens) { ChartColors.onPage(tokens) }
+    val renderer = remember(density, typeface, chartColors) {
+        TrendChartRenderer(chartColors, density.density, density.density * density.fontScale, typeface)
     }
     val labels = weeks.map { LocalDate.ofEpochDay(it.weekStartEpochDay).format(SHORT) }
     var selected by remember(weeks) { mutableStateOf<Int?>(null) }

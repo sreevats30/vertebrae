@@ -46,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -324,6 +323,9 @@ private fun RotatableDemo(
 ) {
     val scope = rememberCoroutineScope()
     var touched by rememberSaveable(item.id) { mutableStateOf(false) }
+    // Readout chips over the viewer: palette tokens (no pure black), read here in composition.
+    val viewer = viewerPalette()
+    val chipBg = AppTheme.colors.canvas.copy(alpha = 0.7f)
     val decay = remember { exponentialDecay<Float>(frictionMultiplier = 1.6f) }
     Box(
         Modifier
@@ -409,7 +411,7 @@ private fun RotatableDemo(
                 .align(Alignment.TopEnd)
                 .padding(10.dp)
                 .clip(RoundedCornerShape(Radius.S))
-                .background(Color.Black.copy(alpha = 0.5f))
+                .background(chipBg)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
                 .clearAndSetSemantics {
                     contentDescription = "Rotation ${normalizeDeg(yaw.value).roundToInt() % 360}°" +
@@ -418,9 +420,9 @@ private fun RotatableDemo(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Text("${normalizeDeg(yaw.value).roundToInt() % 360}°", style = NumericStyle.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize), color = DemoColors.Viewer.pillText)
+            Text("${normalizeDeg(yaw.value).roundToInt() % 360}°", style = NumericStyle.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize), color = viewer.pillText)
             if (tilt.value >= 1f) {
-                Text("· tilt ${tilt.value.roundToInt()}°", style = MaterialTheme.typography.labelMedium, color = DemoColors.Viewer.pillText.copy(alpha = 0.7f))
+                Text("· tilt ${tilt.value.roundToInt()}°", style = MaterialTheme.typography.labelMedium, color = viewer.pillText.copy(alpha = 0.7f))
             }
         }
         // First-use hint (top-left, clear of the figure), gone after the first rotation
@@ -430,15 +432,15 @@ private fun RotatableDemo(
                     .align(Alignment.TopStart)
                     .padding(10.dp)
                     .clip(RoundedCornerShape(Radius.S))
-                    .background(Color.Black.copy(alpha = 0.5f))
+                    .background(chipBg)
                     .padding(horizontal = 8.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Outlined.SwipeLeft, contentDescription = null, tint = DemoColors.Viewer.pillText, modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.SwipeLeft, contentDescription = null, tint = viewer.pillText, modifier = Modifier.size(16.dp))
                 Column {
-                    Text("Drag to rotate 360°", style = MaterialTheme.typography.labelMedium, color = DemoColors.Viewer.pillText)
-                    Text("Two fingers to tilt", style = MaterialTheme.typography.labelSmall, color = DemoColors.Viewer.pillText.copy(alpha = 0.65f))
+                    Text("Drag to rotate 360°", style = MaterialTheme.typography.labelMedium, color = viewer.pillText)
+                    Text("Two fingers to tilt", style = MaterialTheme.typography.labelSmall, color = viewer.pillText.copy(alpha = 0.65f))
                 }
             }
         }
