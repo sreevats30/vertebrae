@@ -52,7 +52,9 @@ data class PipelineOutput(
     val calibration: CalibrationState,
     val events: List<PipelineEvent>,
     /** Physical safety rule currently violated (§4), checked before any alignment cue. */
-    val safety: SafetyAlert? = null
+    val safety: SafetyAlert? = null,
+    /** Endurance cap in force for the locked pose, in seconds (null = uncapped). */
+    val holdCapSec: Int? = null
 ) {
     val lockedLabel: AsanaLabel? get() = lock?.locked
     val score: Double? get() = alignment?.finalScore
@@ -104,7 +106,18 @@ class TorsoCalibrator(private val durationSec: Double = 5.0) {
  * The full per-frame pipeline (§3 stages 1–3), pure Kotlin so it runs identically on live camera
  * frames, replayed `.jsonl` clips and JVM unit tests.
  */
-class PosePipeline(var toleranceProfile: ToleranceProfile = ToleranceProfile.STANDARD) {
+class PosePipeline(
+    var toleranceProfile: ToleranceProfile = ToleranceProfile.STANDARD,
+    /**
+     * Endurance cap for Utkatasana, in seconds. The standard cap unless the caller passes a
+     * shorter one (the practice screen does, from the user's age band). It only shortens the hold
+     * timer — scoring is untouched. A change applies from the next time the pose locks.
+     */
+    var utkatasanaCapSec: Int = Asana.UTKATASANA.maxHoldSec ?: 30
+) {
+
+    /** The endurance cap in force for [asana] (null = uncapped). */
+    fun holdCapSecFor(asana: Asana): Int? = if (asana == Asana.UTKATASANA) utkatasanaCapSec else asana.maxHoldSec
 
     private val classifier = RuleAndCentroidClassifier()
     private val lock = TemporalLock()
@@ -208,20 +221,21 @@ class PosePipeline(var toleranceProfile: ToleranceProfile = ToleranceProfile.STA
         val holdStatus = if (label != null && label.asana.isScored) hold.update(t, holdScore) else HoldStatus.IDLE
         if (label != null) {
             if (holdStatus.praiseTriggered) events += PipelineEvent.Praise(label)
-            if (holdStatus.capReached) events += PipelineEvent.HoldCapReached(label, label.asana.maxHoldSec ?: 0)
+            if (holdStatus.capReached) events += PipelineEvent.HoldCapReached(label, holdCapSecFor(label.asana) ?: 0)
         }
         session.update(t, label, alignment?.finalScore, swayResult?.stability, holdStatus, alignment)
 
         return PipelineOutput(
             frame, preflight, true, classification, lockState, alignment, smoothed, visibility,
-            swayResult, holdStatus, intraSym, calibrator.state(t), events, safety
+            swayResult, holdStatus, intraSym, calibrator.state(t), events, safety,
+            holdCapSec = label?.asana?.let(::holdCapSecFor)
         )
     }
 
     private fun onLockChanged(newLabel: AsanaLabel?) {
         scoringFilters.reset()
         sway.reset()
-        hold = HoldStateMachine(maxHoldSec = newLabel?.asana?.maxHoldSec)
+        hold = HoldStateMachine(maxHoldSec = newLabel?.asana?.let(::holdCapSecFor))
     }
 
     private fun releaseLock(events: MutableList<PipelineEvent>) {

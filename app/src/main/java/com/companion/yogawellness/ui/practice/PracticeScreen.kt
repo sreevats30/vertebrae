@@ -1,5 +1,12 @@
 package com.companion.yogawellness.ui.practice
 
+import androidx.compose.material.icons.rounded.Accessibility
+import com.companion.yogawellness.codex.AsanaCatalog32
+import com.companion.yogawellness.codex.Suitability
+import com.companion.yogawellness.codex.PoseSuitability
+import com.companion.yogawellness.codex.PoseAdvice
+import com.companion.yogawellness.ui.onboarding.currentAgeBand
+import com.companion.yogawellness.personalisation.AgeBand
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -110,7 +117,9 @@ fun PracticeScreen(
     onFinished: () -> Unit = onBack,
     /** Optional hint from the Learn tab. Display only: never changes classification, locking or scoring. */
     targetAsana: Asana? = null,
-    vm: PracticeViewModel = viewModel()
+    vm: PracticeViewModel = viewModel(),
+    /** The user's own band; decides whether [targetAsana] gets an age note. */
+    ageBand: AgeBand? = currentAgeBand()
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -121,6 +130,9 @@ fun PracticeScreen(
     var cameraError by remember { mutableStateOf<String?>(null) }
     var showExplain by rememberSaveable { mutableStateOf(false) }
     var showSafety by rememberSaveable { mutableStateOf(true) }
+    // Once per visit: dismissing it keeps it gone through rotation; the next practice shows it again.
+    var showAgeNote by rememberSaveable(targetAsana) { mutableStateOf(true) }
+    val ageNote = remember(targetAsana, ageBand) { practiceAgeNote(targetAsana, ageBand) }
     var showReplayPicker by remember { mutableStateOf(false) }
 
     state.message?.let { msg ->
@@ -207,6 +219,8 @@ fun PracticeScreen(
                 }
             }
             targetAsana?.let { TargetChip(it) }
+            // Shown before the pre-flight checks; informs only — detection and scoring start regardless.
+            if (ageNote != null && showAgeNote) AgeCautionBanner(ageNote) { showAgeNote = false }
             if (showSafety) SafetyBanner { showSafety = false }
             state.replayName?.let { ReplayBanner(it, vm::stopReplay) }
             state.recordingSec?.let { HudPill(String.format(Locale.US, "Recording landmarks %.0f / 20 s", it), Icons.Rounded.FiberManualRecord, ScoreColors.Red) }
@@ -588,6 +602,58 @@ fun targetHint(target: Asana): String =
         (if (target.cameraAngle == CameraAngle.SIDE_OR_45) " (${target.cameraAngle.instruction.lowercase()})" else "") +
         ". Any of the four poses is still detected."
 
+/** What the practice screen says about a target pose for an age band. */
+data class PracticeAgeNote(val band: AgeBand, val advice: PoseAdvice, val easierOption: String?)
+
+/**
+ * The age note for [target], or null when there is nothing to say: no target, no band yet, or a
+ * pose that suits the band. Only poses that ask for care (or an easier variant) get one.
+ */
+fun practiceAgeNote(target: Asana?, band: AgeBand?): PracticeAgeNote? {
+    if (target == null || band == null) return null
+    val advice = PoseSuitability.adviceFor(target, band) ?: return null
+    if (advice.suitability.isSuggested) return null
+    val easier = AsanaCatalog32.items.firstOrNull { it.liveAsana == target }?.modifications?.firstOrNull()
+    return PracticeAgeNote(band, advice, easier)
+}
+
+/** Dismissable HUD card with the age note for the target pose. Never blocks practice. */
+@Composable
+internal fun AgeCautionBanner(note: PracticeAgeNote, onDismiss: () -> Unit) {
+    val title = if (note.advice.suitability == Suitability.USE_EASIER_VARIANT) "A gentler option may suit you" else "Go gently with this one"
+    HudCard(color = Color(0xF20B1A2C), edge = ScoreColors.Amber.copy(alpha = 0.55f)) {
+        Row(
+            Modifier
+                .background(Brush.horizontalGradient(listOf(ScoreColors.Amber.copy(alpha = 0.16f), Color.Transparent)))
+                .padding(start = 14.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                Icons.Rounded.Accessibility, contentDescription = null, tint = ScoreColors.Amber,
+                modifier = Modifier.padding(top = 12.dp).size(20.dp)
+            )
+            Column(Modifier.weight(1f).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = Color.White)
+                note.advice.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.88f)) }
+                note.easierOption?.let {
+                    Text("Easier option: $it", style = MaterialTheme.typography.bodySmall, color = Brand.Mint)
+                }
+                Text(
+                    "For ages ${note.band.label.lowercase()} · not medical advice",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+            }
+            Surface(onClick = onDismiss, color = Color.Transparent, shape = CircleShape, modifier = Modifier.size(44.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Dismiss age note", tint = Color.White.copy(alpha = 0.8f))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun TargetChip(target: Asana) {
     HudCard(color = Brand.Teal700.copy(alpha = 0.92f)) {
@@ -713,7 +779,7 @@ private fun ScoredPoseInfo(out: PipelineOutput, trailing: @Composable () -> Unit
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         HudStat(
             "HOLD",
-            String.format(Locale.US, "%.1fs", h.graceHoldSec) + (label.asana.maxHoldSec?.let { "/$it" } ?: ""),
+            String.format(Locale.US, "%.1fs", h.graceHoldSec) + (out.holdCapSec?.let { "/$it" } ?: ""),
             Modifier.weight(1f)
         )
         HudStat("STRICT", String.format(Locale.US, "%.1fs", h.strictHoldSec), Modifier.weight(1f))

@@ -1,5 +1,15 @@
 package com.companion.yogawellness.ui.codex
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import com.companion.yogawellness.ui.onboarding.currentAgeBand
+import com.companion.yogawellness.personalisation.AgeBand
+import com.companion.yogawellness.codex.Suitability
+import com.companion.yogawellness.codex.PoseSuitability
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -113,14 +123,18 @@ fun AsanaDetailScreen(id: String, onBack: () -> Unit, onPracticeLive: (Asana) ->
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun AsanaDetailContent(
     item: AsanaCodexItem,
     initialPlaying: Boolean,
     onBack: () -> Unit,
-    onPracticeLive: (Asana) -> Unit
+    onPracticeLive: (Asana) -> Unit,
+    /** The age band the advice is for; null shows the page without any. */
+    ageBand: AgeBand? = currentAgeBand()
 ) {
+    val advice = ageBand?.let { PoseSuitability.adviceFor(item, it) }
+    val easierSection = remember { BringIntoViewRequester() }
     val reducedMotion = animationsDisabled()
     var playing by rememberSaveable(item.id) { mutableStateOf(initialPlaying) }
     var halfSpeed by rememberSaveable(item.id) { mutableStateOf(false) }
@@ -182,6 +196,36 @@ fun AsanaDetailContent(
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.semantics { heading() }
             )
+            // Care note for this age band: a suggestion with a way to the easier option — never a block.
+            if (advice != null && ageBand != null && !advice.suitability.isSuggested) {
+                Callout(
+                    advice.note ?: "Consider the easier option for this pose.",
+                    Icons.Rounded.Accessibility,
+                    ScoreColors.Amber,
+                    title = if (advice.suitability == Suitability.USE_EASIER_VARIANT) "A gentler option may suit you" else "Go gently with this one"
+                ) {
+                    item.modifications.firstOrNull()?.let {
+                        Text("Easier option: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(
+                        "A suggestion for ages ${ageBand.label.lowercase()}, not medical advice. You can still practise this pose.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (item.modifications.isNotEmpty()) {
+                        TextButton(
+                            onClick = { scope.launch { easierSection.bringIntoView() } },
+                            contentPadding = PaddingValues(horizontal = 0.dp)
+                        ) {
+                            Text("See easier options", style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(Icons.Rounded.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            } else if (advice?.note != null) {
+                Callout(advice.note, Icons.Rounded.Accessibility, AppTheme.colors.info, title = "A tip for your age range")
+            }
             Callout("Daily-life benefit: ${item.everydayBenefit}", Icons.Rounded.WbSunny, AppTheme.colors.info)
 
             // Demo + controls
@@ -302,8 +346,10 @@ fun AsanaDetailContent(
                 item.commonMistakes.forEach { BulletRow(it, Icons.Rounded.Close, ScoreColors.Red) }
             }
             if (item.modifications.isNotEmpty()) {
-                DetailSection("Make it easier", Icons.Rounded.Accessibility, ScoreColors.Green) {
-                    item.modifications.forEach { BulletRow(it, Icons.Rounded.Check, ScoreColors.Green) }
+                Box(Modifier.bringIntoViewRequester(easierSection)) {
+                    DetailSection("Make it easier", Icons.Rounded.Accessibility, ScoreColors.Green) {
+                        item.modifications.forEach { BulletRow(it, Icons.Rounded.Check, ScoreColors.Green) }
+                    }
                 }
             }
             Callout(item.safety, Icons.Rounded.WarningAmber, ScoreColors.Amber, title = "Safety") {

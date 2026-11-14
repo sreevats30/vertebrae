@@ -1,5 +1,6 @@
 package com.companion.yogawellness.ui.consent
 
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -102,7 +103,13 @@ fun ConsentAndSafetyScreen(onAccepted: () -> Unit) {
                     Icons.Rounded.Info,
                     AppTheme.colors.info,
                     title = "Important"
-                )
+                ) {
+                    Text(
+                        "It is not intended to replace a doctor or counsellor.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f)
+                    )
+                }
             }
             Reveal(2) {
                 SectionCard("Practise safely", "Physical safety", Brand.Stress) {
@@ -113,7 +120,7 @@ fun ConsentAndSafetyScreen(onAccepted: () -> Unit) {
                         "If you are pregnant, injured, recovering from surgery or have a health condition, check with a doctor before practising.",
                         Brand.Stress
                     )
-                    FeatureRow(Icons.Rounded.Timer, "Hold poses only as long as is comfortable. Chair Pose is capped at 30 seconds.", Brand.Stress)
+                    FeatureRow(Icons.Rounded.Timer, "Hold poses only as long as is comfortable. Chair Pose is capped at 30 seconds, and less from age 51.", Brand.Stress)
                 }
             }
             Reveal(3) {
@@ -126,6 +133,11 @@ fun ConsentAndSafetyScreen(onAccepted: () -> Unit) {
                     FeatureRow(
                         Icons.Rounded.CloudOff,
                         "The app has no internet permission. Check-ins, questionnaire answers and practice history are stored only on this device and are excluded from backups.",
+                        MaterialTheme.colorScheme.primary
+                    )
+                    FeatureRow(
+                        Icons.Rounded.Person,
+                        "Next we ask for your age range — never your birthdate — to suggest suitable poses and timings. It stays on this device.",
                         MaterialTheme.colorScheme.primary
                     )
                     FeatureRow(
@@ -227,7 +239,7 @@ private fun Pillars() {
     PanelCard(spacing = 16.dp) {
         Overline("What you get")
         Pillar(Icons.Rounded.SelfImprovement, Brand.Practice, "Real-time posture analysis", "33 body landmarks, joint angles and a live alignment score for 4 asanas, with a voice coach.")
-        Pillar(Icons.Rounded.Psychology, Brand.Mood, "Mind check-ins", "Daily mood, stress and sleep in 30 seconds; PHQ-9 and GAD-7 reflections every 14 days.")
+        Pillar(Icons.Rounded.Psychology, Brand.Mood, "Mind check-ins", "Daily mood, stress and sleep in 30 seconds; PHQ-9 and GAD-7 reflections every 14 days (18 and over).")
         Pillar(Icons.Rounded.Insights, AppTheme.colors.info, "Honest insights", "Weekly trends with statistics that show their uncertainty — and a 1-page PDF report.")
     }
 }

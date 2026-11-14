@@ -391,6 +391,7 @@ class ScreenRenderTest {
         // Robolectric can reuse the app database file across test classes: start from a clean slate.
         kotlinx.coroutines.runBlocking { app.repository.deleteAllData() }
         app.preferences.consentAcceptedAtMs = 1L
+        app.preferences.ageBand = com.companion.yogawellness.personalisation.AgeBand.AGE_18_30
         setScreen { AppNavHost() }
         listOf("Home", "Learn", "History", "Insights").forEach { compose.onNodeWithText(it).assertExists() }
         save("home_with_bottom_nav")

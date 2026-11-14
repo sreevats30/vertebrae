@@ -1,5 +1,8 @@
 package com.companion.yogawellness.ui.home
 
+import com.companion.yogawellness.personalisation.RoutineSuggester
+import com.companion.yogawellness.personalisation.AgeProfile
+import com.companion.yogawellness.personalisation.AgeBand
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,6 +80,8 @@ fun HomeScreen(
     onHistory: () -> Unit = {},
     /** Opens the Learn-tab page for a pose card. */
     onPose: (Asana) -> Unit = {},
+    /** Opens a Learn page by catalog id (Today's suggestion). */
+    onOpenPose: (String) -> Unit = {},
     vm: WellnessViewModel = viewModel()
 ) {
     val today by vm.todayCheckIn.collectAsStateWithLifecycle()
@@ -84,8 +89,10 @@ fun HomeScreen(
     val gad by vm.latestGad.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     var profile by remember { mutableStateOf(vm.prefs.toleranceProfile) }
+    val ageBand by vm.ageBand.collectAsStateWithLifecycle()
+    val usualHour by vm.usualPracticeHour.collectAsStateWithLifecycle()
     HomeContent(
-        HomeState(today, phq, gad, activity, vm.todayEpochDay, profile),
+        HomeState(today, phq, gad, activity, vm.todayEpochDay, profile, ageBand, usualHour),
         onProfile = { profile = it; vm.setProfile(it) },
         onStartPractice = onStartPractice,
         onCheckIn = onCheckIn,
@@ -94,6 +101,7 @@ fun HomeScreen(
         onSettings = onSettings,
         onHistory = onHistory,
         onPose = onPose,
+        onOpenPose = onOpenPose,
         banner = { DemoBannerBar() }
     )
 }
@@ -105,8 +113,17 @@ data class HomeState(
     val gad: QuestionnaireEntity?,
     val activity: ActivitySummary,
     val todayEpochDay: Long,
-    val profile: ToleranceProfile
-)
+    val profile: ToleranceProfile,
+    /** The user's own band; drives Today's suggestion and whether PHQ-9 / GAD-7 are offered. */
+    val ageBand: AgeBand? = null,
+    /** Hour the user usually practises, once there are enough sessions to say. */
+    val usualPracticeHour: Int? = null,
+    /** "Now", for the time-of-day rules (fixed in tests). */
+    val now: LocalTime = LocalTime.now()
+) {
+    /** Latest stress worth reacting to: today's or yesterday's check-in, never an older one. */
+    val recentStress: Int? get() = today?.stress ?: activity.stress14.takeLast(2).lastOrNull { it != null }
+}
 
 @Composable
 fun HomeContent(
@@ -119,6 +136,7 @@ fun HomeContent(
     onSettings: () -> Unit,
     onHistory: () -> Unit = {},
     onPose: (Asana) -> Unit = {},
+    onOpenPose: (String) -> Unit = {},
     /** Shown above the cards, e.g. the "viewing demo data" banner. */
     banner: @Composable () -> Unit = {}
 ) {
@@ -142,13 +160,20 @@ fun HomeContent(
                     }
                 }
                 Reveal(1, h) { PracticeLaunchCard(state.profile, onProfile, onStartPractice) }
+                state.ageBand?.let { band ->
+                    val suggestion = remember(band, state.now.hour, state.recentStress) {
+                        RoutineSuggester.suggest(state.now, band, state.recentStress)
+                    }
+                    Reveal(1, h) { TodaySuggestionCard(suggestion, band, state.usualPracticeHour, onOpenPose) }
+                }
                 Reveal(2, h) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         WeekMetrics(activity)
                         HistoryCard(onHistory)
                     }
                 }
-                Reveal(3, h) {
+                // Under 18 the PHQ-9 / GAD-7 reflections are not offered; the daily check-in stays.
+                if (AgeProfile.questionnairesEnabledFor(state.ageBand)) Reveal(3, h) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         SectionHeader("Mind & mood", overline = "Fortnightly self-reflection")
                         ReflectionCard(QuestionnaireType.PHQ9, state.phq, state.todayEpochDay, onQuestionnaire)

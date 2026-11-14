@@ -1,5 +1,8 @@
 package com.companion.yogawellness.ui
 
+import androidx.compose.runtime.LaunchedEffect
+import com.companion.yogawellness.personalisation.AgeProfile
+import com.companion.yogawellness.ui.onboarding.AgeOnboardingScreen
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.drawWithContent
@@ -60,6 +63,8 @@ import com.companion.yogawellness.wellness.QuestionnaireType
 
 object Routes {
     const val CONSENT = "consent"
+    /** One-question onboarding, shown after consent while no age band is stored. */
+    const val AGE = "age"
     const val HOME = "home"
     /** Practice, with an optional `asana` hint from the Learn tab (display only). */
     const val PRACTICE = "practice?asana={asana}"
@@ -74,6 +79,13 @@ object Routes {
     fun questionnaire(type: QuestionnaireType) = "questionnaire/${type.name}"
     fun practice(target: Asana? = null) = if (target == null) "practice" else "practice?asana=${target.name}"
     fun codexDetail(id: String) = "codex/$id"
+}
+
+/** First screen: consent, then the age question (once, and for installs that predate it), then Home. */
+fun startRoute(hasConsent: Boolean, hasAgeBand: Boolean): String = when {
+    !hasConsent -> Routes.CONSENT
+    !hasAgeBand -> Routes.AGE
+    else -> Routes.HOME
 }
 
 /** The four destinations of the bottom navigation bar. */
@@ -147,7 +159,7 @@ private fun androidx.compose.animation.AnimatedContentTransitionScope<androidx.n
 @Composable
 fun AppNavHost(nav: NavHostController = rememberNavController()) {
     val app = LocalContext.current.applicationContext as YogaWellnessApp
-    val start = if (app.preferences.hasConsent) Routes.HOME else Routes.CONSENT
+    val start = startRoute(app.preferences.hasConsent, app.preferences.hasAgeBand)
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
 
@@ -180,7 +192,16 @@ fun AppNavHost(nav: NavHostController = rememberNavController()) {
                 val vm: WellnessViewModel = viewModel()
                 ConsentAndSafetyScreen(onAccepted = {
                     vm.acceptConsent()
-                    nav.navigate(Routes.HOME) { popUpTo(Routes.CONSENT) { inclusive = true } }
+                    nav.navigate(startRoute(hasConsent = true, hasAgeBand = app.preferences.hasAgeBand)) {
+                        popUpTo(Routes.CONSENT) { inclusive = true }
+                    }
+                })
+            }
+            composable(Routes.AGE) {
+                val vm: WellnessViewModel = viewModel()
+                AgeOnboardingScreen(onContinue = { band ->
+                    vm.setAgeBand(band)
+                    nav.navigate(Routes.HOME) { popUpTo(Routes.AGE) { inclusive = true } }
                 })
             }
             composable(Routes.HOME) {
@@ -191,6 +212,7 @@ fun AppNavHost(nav: NavHostController = rememberNavController()) {
                     onDashboard = { nav.navigateTopLevel(Routes.DASHBOARD) },
                     onHistory = { nav.navigateTopLevel(Routes.HISTORY) },
                     onPose = { asana -> codexIdFor(asana)?.let { nav.navigate(Routes.codexDetail(it)) } },
+                    onOpenPose = { nav.navigate(Routes.codexDetail(it)) },
                     onSettings = { nav.navigate(Routes.SETTINGS) }
                 )
             }
@@ -214,7 +236,12 @@ fun AppNavHost(nav: NavHostController = rememberNavController()) {
             composable(Routes.CHECK_IN) { CheckInScreen(onDone = { nav.popBackStack() }) }
             composable(Routes.QUESTIONNAIRE) { entry ->
                 val type = QuestionnaireType.valueOf(entry.arguments?.getString("type") ?: QuestionnaireType.PHQ9.name)
-                QuestionnaireScreen(type, onDone = { nav.popBackStack() })
+                if (AgeProfile.questionnairesEnabledFor(app.preferences.ageBand)) {
+                    QuestionnaireScreen(type, onDone = { nav.popBackStack() })
+                } else {
+                    // Under 18 there is no entry point; a stale deep link just goes back.
+                    LaunchedEffect(Unit) { nav.popBackStack() }
+                }
             }
             // Top-level tab: no back arrow (system back returns to Home).
             composable(Routes.DASHBOARD) { WellnessDashboardScreen(onBack = null) }

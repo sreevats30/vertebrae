@@ -7,6 +7,10 @@
         android:required="true" />
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Optional daily practice reminder (off by default; asked for when switched on, Android 13+). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Re-arms that reminder after a restart. Neither permission touches the network. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- §2.1 Privacy proof: explicitly strip INTERNET (and network state) even if a transitive
          library requests it. Check Android Studio -> AndroidManifest.xml -> "Merged Manifest". -->
     <uses-permission
@@ -39,6 +43,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".personalisation.PracticeReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Shares the exported weekly PDF report (cache/reports only). -->
         <provider

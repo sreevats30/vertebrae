@@ -1,5 +1,6 @@
 package com.companion.yogawellness.ui.practice
 
+import com.companion.yogawellness.personalisation.AgeProfile
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -61,7 +62,8 @@ class PracticeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val container = app as YogaWellnessApp
     private val prefs: AppPreferences = container.preferences
-    private val pipeline = PosePipeline(prefs.toleranceProfile)
+    // Recording always belongs to My Account, so the user's own age band sets the Chair Pose cap.
+    private val pipeline = PosePipeline(prefs.toleranceProfile, AgeProfile.utkatasanaCapFor(prefs.ageBand))
     private val accelerometer = AccelerometerMonitor(app)
     private val coach = OfflineTtsCoach(app).apply { enabled = prefs.voiceCoachEnabled }
     val recorder = LandmarkRecorder(container.recordingsDir)

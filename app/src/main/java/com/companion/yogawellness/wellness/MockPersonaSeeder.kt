@@ -1,5 +1,6 @@
 package com.companion.yogawellness.wellness
 
+import com.companion.yogawellness.personalisation.AgeBand
 import com.companion.yogawellness.data.ProfileIds
 import com.companion.yogawellness.data.db.DailyCheckInEntity
 import com.companion.yogawellness.data.db.PoseRecordEntity
@@ -19,19 +20,21 @@ enum class Persona(
     /** The [ProfileIds] dataset this persona is stored under — never MY_ACCOUNT. */
     val profileId: String,
     /** Short chip label. */
-    val shortLabel: String
+    val shortLabel: String,
+    /** Fixed, synthetic age band, so the demo dashboard is personalised. Never written to the user's settings. */
+    val ageBand: AgeBand
 ) {
     A_CONSISTENT(
         "Persona A · Consistent Improvement", "Practises most days; alignment improves and self-rated stress drifts down.",
-        ProfileIds.PERSONA_A, "Demo A"
+        ProfileIds.PERSONA_A, "Demo A", AgeBand.AGE_18_30
     ),
     B_EXAM_GAP(
         "Persona B · Exam Gap", "Regular practice, a two-week exam gap with little practice and high stress, then a return.",
-        ProfileIds.PERSONA_B, "Demo B"
+        ProfileIds.PERSONA_B, "Demo B", AgeBand.AGE_18_30
     ),
     C_NULL(
         "Persona C · Null Pattern", "Practice and stress vary independently — the dashboard should report no pattern.",
-        ProfileIds.PERSONA_C, "Demo C"
+        ProfileIds.PERSONA_C, "Demo C", AgeBand.AGE_31_50
     );
 
     companion object {

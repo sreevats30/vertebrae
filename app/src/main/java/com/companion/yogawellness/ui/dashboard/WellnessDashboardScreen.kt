@@ -1,5 +1,8 @@
 package com.companion.yogawellness.ui.dashboard
 
+import com.companion.yogawellness.ui.wellness.SupportLineCard
+import com.companion.yogawellness.personalisation.AgeProfile
+import com.companion.yogawellness.personalisation.AgeBand
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.border
@@ -119,6 +122,7 @@ fun WellnessDashboardScreen(onBack: (() -> Unit)? = null, vm: DashboardViewModel
     }
     DashboardScreenContent(
         profileData?.data, profileData?.demoLabel, error, onBack, export,
+        ageBand = profileData?.ageBand,
         profiles = {
             ProfileSelectorBar()
             DemoBannerBar()
@@ -137,8 +141,11 @@ fun DashboardScreenContent(
     error: String?,
     onBack: (() -> Unit)?,
     onExport: () -> Unit,
+    /** Band of the viewed dataset; under 18, the reflection card gives way to the support line. */
+    ageBand: AgeBand? = null,
     profiles: @Composable () -> Unit = {}
 ) {
+    val questionnaires = AgeProfile.questionnairesEnabledFor(ageBand)
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -177,8 +184,9 @@ fun DashboardScreenContent(
                     }
                 }
                 data.isEmpty -> EmptyState()
-                else -> DashboardContent(data, onExport)
+                else -> DashboardContent(data, onExport, questionnaires)
             }
+            if (!questionnaires) SupportLineCard()
         }
     }
 }
@@ -197,7 +205,7 @@ private fun EmptyState() {
 }
 
 @Composable
-fun DashboardContent(d: DashboardData, onExport: () -> Unit) {
+fun DashboardContent(d: DashboardData, onExport: () -> Unit, questionnairesEnabled: Boolean = true) {
     Reveal(0) { StatTiles(d) }
     Reveal(1) { TrendCard(d.weeks) }
     Reveal(2) { SymmetryCard(d) }
@@ -208,7 +216,7 @@ fun DashboardContent(d: DashboardData, onExport: () -> Unit) {
         }
     }
     d.insights.forEachIndexed { i, card -> Reveal(3 + i) { InsightCardView(card) } }
-    ReflectionCard(d)
+    if (questionnairesEnabled) ReflectionCard(d)
     GradientButton("Export weekly PDF report", onExport, Modifier.fillMaxWidth(), icon = Icons.Rounded.PictureAsPdf)
     Spacer(Modifier.height(4.dp))
 }

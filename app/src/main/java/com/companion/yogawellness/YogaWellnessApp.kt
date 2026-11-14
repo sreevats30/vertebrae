@@ -1,5 +1,6 @@
 package com.companion.yogawellness
 
+import com.companion.yogawellness.personalisation.PracticeReminder
 import android.app.Application
 import com.companion.yogawellness.data.ActiveProfile
 import com.companion.yogawellness.data.AppPreferences
@@ -14,6 +15,12 @@ import java.io.File
 
 /** Manual dependency container — the app is small enough not to need a DI framework. */
 class YogaWellnessApp : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        // Keeps the optional reminder alarm in step with the setting (alarms do not survive every update).
+        PracticeReminder.sync(this)
+    }
 
     /** Outlives screens, e.g. to finish saving a practice session after the user navigates away. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

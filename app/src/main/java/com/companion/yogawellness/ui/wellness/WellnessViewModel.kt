@@ -1,5 +1,10 @@
 package com.companion.yogawellness.ui.wellness
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.companion.yogawellness.personalisation.PracticeReminder
+import kotlinx.coroutines.flow.map
+import com.companion.yogawellness.personalisation.RoutineSuggester
+import com.companion.yogawellness.personalisation.AgeBand
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -52,11 +57,37 @@ class WellnessViewModel(app: Application) : AndroidViewModel(app) {
         ) { checkIns, sessions -> ActivitySummary.from(checkIns, sessions, todayEpochDay) }.flowOn(Dispatchers.Default)
     )
 
+    /** The hour the user usually practises (null under 5 sessions), from the last 60 days. */
+    val usualPracticeHour: StateFlow<Int?> = flowState(
+        null,
+        repo.observeSessionsSince(todayEpochDay - (ActivitySummary.LOOKBACK_DAYS - 1), me)
+            .map { RoutineSuggester.usualPracticeHour(it) }
+            .flowOn(Dispatchers.Default)
+    )
+
     fun history(type: QuestionnaireType) = if (type == QuestionnaireType.PHQ9) phqHistory else gadHistory
     fun latest(type: QuestionnaireType) = if (type == QuestionnaireType.PHQ9) latestPhq else latestGad
 
     fun acceptConsent() {
         prefs.consentAcceptedAtMs = System.currentTimeMillis()
+    }
+
+    /** The user's own age band (null until onboarding is done). */
+    val ageBand: StateFlow<AgeBand?> = prefs.ageBandState
+
+    fun setAgeBand(band: AgeBand) {
+        prefs.ageBand = band
+    }
+
+    private val _reminder = MutableStateFlow(prefs.reminderEnabled to prefs.reminderHour)
+    /** (enabled, hour) of the optional daily reminder. */
+    val reminder: StateFlow<Pair<Boolean, Int>> = _reminder
+
+    fun setReminder(enabled: Boolean, hour: Int) {
+        prefs.reminderEnabled = enabled
+        prefs.reminderHour = hour
+        _reminder.value = enabled to prefs.reminderHour
+        PracticeReminder.sync(getApplication())
     }
 
     fun setProfile(p: ToleranceProfile) {
@@ -97,6 +128,7 @@ class WellnessViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteAllData(onDone: () -> Unit) {
         viewModelScope.launch {
             repo.deleteAllData()
+            PracticeReminder.cancel(getApplication()) // the setting is gone; so is the alarm
             container.activeProfile.returnToMyAccount()
             onDone()
         }

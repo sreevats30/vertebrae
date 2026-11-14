@@ -1,5 +1,13 @@
 package com.companion.yogawellness.ui.home
 
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.WbTwilight
+import androidx.compose.foundation.clickable
+import com.companion.yogawellness.ui.codex.SkeletonThumbnail
+import com.companion.yogawellness.codex.AsanaCodexItem
+import com.companion.yogawellness.personalisation.SuggestedRoutine
+import com.companion.yogawellness.personalisation.RoutineSuggester
+import com.companion.yogawellness.personalisation.AgeBand
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.IntrinsicSize
 import com.companion.yogawellness.ui.components.PoseStage
@@ -634,5 +642,73 @@ internal fun PrivacyFooter(onSettings: () -> Unit) {
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Today's suggestion
+// ---------------------------------------------------------------------------------------------
+
+/** Time-of-day routine for the user's age band, with their usual practice time once known. */
+@Composable
+internal fun TodaySuggestionCard(
+    r: SuggestedRoutine,
+    band: AgeBand,
+    usualHour: Int?,
+    onOpenPose: (String) -> Unit
+) {
+    val accent = if (r.calmBecauseOfStress) Brand.Mind else MaterialTheme.colorScheme.primary
+    PanelCard(spacing = 14.dp, glow = accent) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            IconBadge(if (r.calmBecauseOfStress) Icons.Rounded.Bedtime else Icons.Rounded.WbTwilight, accent, size = 44.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Overline("Today's suggestion", color = accent)
+                Text(r.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+            Pill("About ${r.minutes} min", icon = Icons.Rounded.Schedule, color = accent)
+        }
+        Text(r.reason, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(r.poses, key = { it.id }) { item -> SuggestedPose(item) { onOpenPose(item.id) } }
+        }
+        r.poses.firstOrNull()?.let { first ->
+            GradientButton("Start with ${first.englishName}", { onOpenPose(first.id) }, Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            usualHour?.let {
+                SuggestionLine(Icons.Rounded.History, "You usually practise around ${RoutineSuggester.formatHour(it)}.")
+            }
+            SuggestionLine(Icons.Rounded.Restaurant, RoutineSuggester.TIP)
+            Text(
+                "Chosen for ages ${band.label.lowercase()} · general guidance, not medical advice",
+                style = MaterialTheme.typography.labelSmall,
+                color = AppTheme.colors.inkMuted
+            )
+        }
+    }
+}
+
+@Composable
+private fun SuggestedPose(item: AsanaCodexItem, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(96.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(role = Role.Button, onClickLabel = "Open ${item.englishName}", onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        SkeletonThumbnail(item, item.defaultView, Modifier.fillMaxWidth())
+        Text(
+            item.englishName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2, minLines = 2
+        )
+    }
+}
+
+@Composable
+private fun SuggestionLine(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = AppTheme.colors.inkMuted, modifier = Modifier.size(16.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

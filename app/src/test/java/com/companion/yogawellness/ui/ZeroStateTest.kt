@@ -51,6 +51,7 @@ class ZeroStateTest {
         // Robolectric can reuse the app database file across test classes: start from a clean slate.
         runBlocking { app.repository.deleteAllData() }
         app.preferences.consentAcceptedAtMs = 1L
+        app.preferences.ageBand = com.companion.yogawellness.personalisation.AgeBand.AGE_18_30
     }
 
     @Test
