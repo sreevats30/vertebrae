@@ -429,12 +429,31 @@ Connect your phone via USB with **USB Debugging** enabled:
 .\gradlew.bat :app:installDebug
 ```
 
-<<<<<<< HEAD
-### 5. On-Device Instrumentation Tests
-Validates real hardware camera initialization, MediaPipe model loading, and native `PdfDocument` rendering:
-=======
 On Windows use `gradlew.bat` instead of `./gradlew`. If Gradle cannot find the SDK, create `local.properties`
 in the repo root containing `sdk.dir=/path/to/Android/Sdk`.
+
+### 5. On-Device Instrumentation Tests
+Validates real hardware camera initialization, MediaPipe model loading, and native `PdfDocument` rendering:
+
+```bash
+.\gradlew.bat :app:connectedDebugAndroidTest
+```
+
+### 6. Tuning Thresholds with Real Recordings & Offline Replay
+
+You can record real user movement on-device and replay it deterministically on your workstation without needing a camera or physical subject:
+
+1. On the **Practice screen**, tap **⏺ (Record)** to capture 20 seconds of smoothed landmarks (never images or video) to a `.jsonl` clip.
+2. Pull the recorded clips to your local test suite:
+   ```bash
+   adb pull /sdcard/Android/data/com.companion.yogawellness/files/recordings/ app/src/test/resources/clips/
+   ```
+3. Replay clips through the exact live pipeline and print a detailed terminal report (temporal locks, joint scores, hold timers, spoken voice cues):
+   ```bash
+   .\gradlew.bat :app:testDebugUnitTest --tests '*RecordReplayTest.replayRecordedClips' -i
+   ```
+
+Joint targets and angular tolerances are configured in [`AsanaSpecs.kt`](app/src/main/java/com/companion/yogawellness/scoring/AsanaSpecs.kt); classifier heuristics in [`RuleAndCentroidClassifier.kt`](app/src/main/java/com/companion/yogawellness/classifier/RuleAndCentroidClassifier.kt); and sway mapping in [`SwayStabilityTracker.kt`](app/src/main/java/com/companion/yogawellness/scoring/SwayStabilityTracker.kt).
 
 ## What's in the app (v1.1)
 
@@ -495,35 +514,8 @@ and Settings open full-screen without the bar.
 **No camera / bad lighting on stage?** Practice screen → ⟲ (replay) → *Demo · Warrior II correction
 (synthetic)* plays the same wrong → corrected sequence through the real pipeline, with voice.
 
-## Tuning thresholds with real recordings
-
-1. Practice screen → ⏺ records 20 s of landmarks (never images) to a `.jsonl` clip.
-2. Copy clips to the test folder:
->>>>>>> 7ba278c7ed9d8e22a30181b25f764a38eb873e70
-
-```bash
-.\gradlew.bat :app:connectedDebugAndroidTest
-```
-
-### 6. Tuning Thresholds with Real Recordings & Offline Replay
-
-You can record real user movement on-device and replay it deterministically on your workstation without needing a camera or physical subject:
-
-1. On the **Practice screen**, tap **⏺ (Record)** to capture 20 seconds of smoothed landmarks (never images or video) to a `.jsonl` clip.
-2. Pull the recorded clips to your local test suite:
-   ```bash
-   adb pull /sdcard/Android/data/com.companion.yogawellness/files/recordings/ app/src/test/resources/clips/
-   ```
-3. Replay clips through the exact live pipeline and print a detailed terminal report (temporal locks, joint scores, hold timers, spoken voice cues):
-   ```bash
-   .\gradlew.bat :app:testDebugUnitTest --tests '*RecordReplayTest.replayRecordedClips' -i
-   ```
-
-Joint targets and angular tolerances are configured in [`AsanaSpecs.kt`](app/src/main/java/com/companion/yogawellness/scoring/AsanaSpecs.kt); classifier heuristics in [`RuleAndCentroidClassifier.kt`](app/src/main/java/com/companion/yogawellness/classifier/RuleAndCentroidClassifier.kt); and sway mapping in [`SwayStabilityTracker.kt`](app/src/main/java/com/companion/yogawellness/scoring/SwayStabilityTracker.kt).
-
-<<<<<<< HEAD
 ---
-=======
+
 | Blueprint | Code (`app/src/main/java/com/companion/yogawellness/`) |
 |---|---|
 | §2.1 manifest privacy | `app/src/main/AndroidManifest.xml`, `res/xml/data_extraction_rules.xml` |
@@ -548,11 +540,9 @@ Joint targets and angular tolerances are configured in [`AsanaSpecs.kt`](app/src
 | Design system (colours, type, spacing, radii) | `ui/theme/Theme.kt`, `ui/theme/Type.kt` |
 | Shared UI components + artwork | `ui/components/Kit.kt`, `ui/components/Artwork.kt` |
 | Home summary (streak, week, sparklines) | `wellness/ActivitySummary.kt`, `ui/home/` |
->>>>>>> 7ba278c7ed9d8e22a30181b25f764a38eb873e70
 
 ## 💡 Key Engineering Decisions & Kinematic Design
 
-<<<<<<< HEAD
 - **`JointGeometry` Flexibility**: Replaces fixed landmark triplets with dynamic geometry models (`ThreePoint`, `BilateralAverage`, `SegmentVsVertical`, `SegmentVsHorizontal`) to support side-dependent anatomical variations and world-frame gravity alignment.
 - **Knee Angles Above 180° (Hyperextension Awareness)**: A straight knee whose vertex passes behind the hip–ankle line in depth is computed as $360^\circ - \theta$. This allows the hyperextension safety guard ($> 182^\circ$) and "do not lock your knee" cues to trigger accurately.
 - **Stacked Analytics Panels vs. Dual-Axis Plots**: The weekly trend dashboard displays two vertically stacked independent panels (Quality $0 - 100$ above; Mood & Stress $1 - 10$ below) sharing a time axis. Dual-axis plots are deliberately avoided because divergent y-scales can visually manufacture false correlations where none exist.
@@ -560,7 +550,9 @@ Joint targets and angular tolerances are configured in [`AsanaSpecs.kt`](app/src
 - **Synchronized Lock & Correction Speech**: When a pose lock announcement and an alignment correction coincide, they are spoken together in one fluid sentence so corrective cues are heard while the pose is still fresh.
 - **Camera Preview FIT_CENTER**: The camera preview renders using `FIT_CENTER` (displaying the entire analysed sensor frame without cropping) so the user's perception of "full body in frame" matches the algorithmic bounding box.
 - **Procedural Single-Segment Spine Solver**: Learn demos utilize a unified torso vector. Complex spinal curves (Cat-Cow, Cobra) are procedurally modeled through coordinated head, hip, and arm angles. `ForwardKinematicsTest` verifies every joint angle against the FK solver within $\pm 3^\circ$ ($\pm 5^\circ$ for compound twists).
-=======
+
+### Visual & Architectural Design — "Practice Room"
+
 **Direction — "practice room".** A dark, warm-neutral interface. The app is used with the phone propped up
 across a room, often in low light, and the camera screen is dark by nature, so every screen shares one dark
 identity (the app is dark-only). The look comes from typography, spacing and restraint rather than decoration.
@@ -578,7 +570,7 @@ identity (the app is dark-only). The look comes from typography, spacing and res
   - *Inter* for everything you operate or measure: labels, controls, lists, and numbers — always with tabular
     figures (`NumericStyle`). Section headings are small, semibold and sentence case (`SectionStyle`).
 - **Space and shape**: a 4-point scale with a 20 dp page gutter (`Space`); radii are 4 dp for small marks, 8 dp
-  for anything you press or type into, 12 dp for media and sheets (`Radius`). Selectors use concentric radii.
+    for anything you press or type into, 12 dp for media and sheets (`Radius`). Selectors use concentric radii.
 - **Structure**: content is grouped into `Section`s separated by full-width hairlines and spacing — not cards.
   Raised fills are kept for controls, media tiles, sheets and dialogs. Lists run edge to edge (`ListRow`).
 - **Screens** (`ui/components/Kit.kt`): `AppScreen` / `AppLazyScreen` give every screen the same slim bar; top-level
@@ -592,7 +584,6 @@ identity (the app is dark-only). The look comes from typography, spacing and res
 - **Camera HUD**: translucent ink panels over the preview with the same ivory text, jade and score colours.
 - **Screenshots**: `./gradlew :app:testDebugUnitTest --tests '*ScreenRenderTest*'` renders every screen (including
   full-length, narrow-phone, demo-data and 2× font variants) to `app/build/screenshots/`.
->>>>>>> 7ba278c7ed9d8e22a30181b25f764a38eb873e70
 
 ---
 
