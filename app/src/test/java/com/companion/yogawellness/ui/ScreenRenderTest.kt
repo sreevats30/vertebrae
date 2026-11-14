@@ -301,7 +301,7 @@ class ScreenRenderTest {
         save("dashboard_persona_a")
     }
 
-    private fun historyState(profileId: String = com.companion.yogawellness.data.ProfileIds.MY_ACCOUNT): com.companion.yogawellness.ui.history.HistoryUiState {
+    internal fun historyState(profileId: String = com.companion.yogawellness.data.ProfileIds.MY_ACCOUNT): com.companion.yogawellness.ui.history.HistoryUiState {
         val now = 1_731_400_000_000L
         val live = com.companion.yogawellness.data.db.PracticeSessionEntity(
             id = 2, epochDay = 20_040, startedAtMs = now, endedAtMs = now + 200_000, activeSec = 200.0, meanScore = 72.0,

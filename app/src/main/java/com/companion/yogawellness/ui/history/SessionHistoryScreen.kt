@@ -1,5 +1,8 @@
 package com.companion.yogawellness.ui.history
 
+import com.companion.yogawellness.ui.components.PoseStage
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -192,18 +195,15 @@ fun SessionHistoryContent(
 @Composable
 private fun EmptyHistory(onStartPractice: () -> Unit) {
     PanelCard(spacing = 14.dp) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Brush.linearGradient(listOf(AppTheme.colors.heroStart, AppTheme.colors.heroMid, Brand.Teal700))),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-                listOf(Asana.VRIKSHASANA, Asana.VIRABHADRASANA_II, Asana.UTKATASANA).forEach {
-                    PoseGlyph(it, Modifier.size(if (it == Asana.VIRABHADRASANA_II) 110.dp else 80.dp))
-                }
+        PoseStage(Modifier.fillMaxWidth().height(156.dp), shape = RoundedCornerShape(20.dp), light = Offset(0.5f, 0.6f)) {
+            Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom
+            ) {
+                // The side figures sit back and dimmer, so the three read as one composition in depth.
+                PoseGlyph(Asana.VRIKSHASANA, Modifier.size(80.dp).alpha(0.78f), glow = false)
+                PoseGlyph(Asana.VIRABHADRASANA_II, Modifier.size(124.dp), measure = true, breathing = true)
+                PoseGlyph(Asana.UTKATASANA, Modifier.size(80.dp).alpha(0.78f), glow = false)
             }
         }
         Text("Your practice log starts here", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -221,9 +221,10 @@ private fun SummaryCard(s: HistorySummary) {
     val c = AppTheme.colors
     PanelCard(
         color = c.heroStart,
-        brush = Brush.linearGradient(listOf(c.heroStart, c.heroMid, Brand.Teal700)),
+        brush = c.featureBrush,
         borderColor = null,
-        spacing = 14.dp
+        spacing = 14.dp,
+        glow = Brand.Mint
     ) {
         Column {
             Overline("All practice", color = Brand.Mint)
@@ -245,7 +246,8 @@ private fun SummaryStat(icon: ImageVector, label: String, value: String, modifie
     Row(
         modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(Color.Black.copy(alpha = 0.20f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -283,7 +285,8 @@ private fun DateBadge(startedAtMs: Long, accent: Color) {
         Modifier
             .size(width = 48.dp, height = 52.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(accent.copy(alpha = 0.12f)),
+            .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.08f))))
+            .border(1.dp, accent.copy(alpha = 0.28f), RoundedCornerShape(14.dp)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -366,18 +369,13 @@ private fun PoseRow(p: PoseRecordEntity) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+            .background(AppTheme.colors.well)
+            .border(1.dp, AppTheme.colors.wellBorder, RoundedCornerShape(16.dp))
             .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(
-            Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(AppTheme.colors.heroStart, Brand.Teal700))),
-            contentAlignment = Alignment.Center
-        ) {
-            asana?.let { PoseGlyph(it, Modifier.size(40.dp), glow = false) }
+        PoseStage(Modifier.size(52.dp), shape = RoundedCornerShape(14.dp), floor = false) {
+            asana?.let { PoseGlyph(it, Modifier.size(44.dp), glow = false) }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(poseTitle(p), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)

@@ -14,6 +14,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Shape
+import com.companion.yogawellness.ui.theme.AppTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -144,8 +151,17 @@ fun BrandMark(modifier: Modifier = Modifier, size: Dp = 44.dp, ring: Boolean = t
 // Coordinates are in a 100 × 100 box.
 // ---------------------------------------------------------------------------------------------
 
-private class Figure(val head: Offset, val headR: Float, val bones: List<Pair<Offset, Offset>>) {
-    val joints: Set<Offset> get() = bones.flatMap { listOf(it.first, it.second) }.toSet()
+private class Figure(
+    val head: Offset,
+    val headR: Float,
+    val bones: List<Pair<Offset, Offset>>,
+    /** The joint this pose is "about" — limb end, vertex, limb end — drawn as a measured angle. */
+    val angle: Triple<Offset, Offset, Offset>? = null
+) {
+    val joints: List<Offset> = bones.flatMap { listOf(it.first, it.second) }.distinct()
+    val minX: Float = joints.minOf { it.x }
+    val maxX: Float = joints.maxOf { it.x }
+    val floorY: Float = joints.maxOf { it.y }
 }
 
 private fun o(x: Number, y: Number) = Offset(x.toFloat(), y.toFloat())
@@ -169,7 +185,8 @@ private fun figureFor(asana: Asana): Figure = when (asana) {
             o(50, 27), 6.5f,
             listOf(ls to rs, lh to rh, ls to lh, rs to rh) +
                 chain(ls, o(38, 23), o(48, 8)) + chain(rs, o(62, 23), o(52, 8)) +
-                chain(lh, o(45, 79), o(45, 96)) + chain(rh, o(68, 73), o(49, 72))
+                chain(lh, o(45, 79), o(45, 96)) + chain(rh, o(68, 73), o(49, 72)),
+            angle = Triple(rh, o(68, 73), o(49, 72))
         )
     }
     Asana.VIRABHADRASANA_II -> {
@@ -178,7 +195,8 @@ private fun figureFor(asana: Asana): Figure = when (asana) {
             o(54, 24), 6.5f,
             listOf(ls to rs, lh to rh, ls to lh, rs to rh) +
                 chain(ls, o(29, 36), o(11, 36)) + chain(rs, o(78, 36), o(95, 36)) +
-                chain(lh, o(28, 63), o(27, 94)) + chain(rh, o(74, 77), o(89, 94))
+                chain(lh, o(28, 63), o(27, 94)) + chain(rh, o(74, 77), o(89, 94)),
+            angle = Triple(lh, o(28, 63), o(27, 94))
         )
     }
     Asana.TRIKONASANA -> {
@@ -187,36 +205,54 @@ private fun figureFor(asana: Asana): Figure = when (asana) {
             o(27, 34), 6.5f,
             listOf(ls to rs, lh to rh, ls to lh, rs to rh) +
                 chain(ls, o(29, 62), o(27, 76)) + chain(rs, o(42, 22), o(43, 7)) +
-                chain(lh, o(36, 78), o(21, 94)) + chain(rh, o(70, 74), o(83, 94))
+                chain(lh, o(36, 78), o(21, 94)) + chain(rh, o(70, 74), o(83, 94)),
+            angle = Triple(ls, lh, o(36, 78))
         )
     }
     Asana.UTKATASANA -> {
         val s = o(48, 35); val hip = o(61, 62)
         Figure(
             o(37, 28), 6.5f,
-            listOf(s to hip) + chain(s, o(44, 20), o(40, 5)) + chain(hip, o(37, 69), o(45, 94)) + listOf(o(45, 94) to o(34, 95))
+            listOf(s to hip) + chain(s, o(44, 20), o(40, 5)) + chain(hip, o(37, 69), o(45, 94)) + listOf(o(45, 94) to o(34, 95)),
+            angle = Triple(hip, o(37, 69), o(45, 94))
         )
     }
 }
 
-/** Draws [asana] as a glowing keypoint figure. */
+private val FIGURES: Map<Asana, Figure> = Asana.entries.associateWith(::figureFor)
+
+/**
+ * Draws [asana] as a luminous biomechanical figure: glowing bones with a bright core, ring-shaped
+ * joint markers and, with [ground], the floor it stands on. [measure] adds the gold angle arc at
+ * the joint the pose is about; [breathing] lets the glow swell slowly (for one hero figure per screen).
+ */
 @Composable
 fun PoseGlyph(
     asana: Asana,
     modifier: Modifier = Modifier,
     color: Color = Brand.Mint,
     jointColor: Color = Color.White,
-    glow: Boolean = true
+    glow: Boolean = true,
+    ground: Boolean = glow,
+    measure: Boolean = false,
+    breathing: Boolean = false
 ) {
-    val fig = figureFor(asana)
+    val fig = FIGURES.getValue(asana)
+    val pulse = if (breathing) {
+        rememberInfiniteTransition(label = "breath").animateFloat(
+            0.75f, 1.25f, infiniteRepeatable(tween(2800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow"
+        )
+    } else null
     Canvas(modifier) {
         val s = minOf(size.width, size.height) / 100f
         val dx = (size.width - 100f * s) / 2f
         val dy = (size.height - 100f * s) / 2f
         fun m(p: Offset) = Offset(dx + p.x * s, dy + p.y * s)
-        drawFigure(fig, ::m, s, color, jointColor, glow)
+        drawFigure(fig, ::m, s, color, jointColor, glow, ground, measure, pulse?.value ?: 1f)
     }
 }
+
+private val JointCore = Color(0xFF06182B)
 
 private fun DrawScope.drawFigure(
     fig: Figure,
@@ -224,17 +260,111 @@ private fun DrawScope.drawFigure(
     s: Float,
     color: Color,
     jointColor: Color,
-    glow: Boolean
+    glow: Boolean,
+    ground: Boolean,
+    measure: Boolean,
+    glowGain: Float
 ) {
-    val bone = 3.6f * s
+    val bone = 3.2f * s
+    if (ground) {
+        // Floor: a soft contact shadow and a hairline that fades out at both ends.
+        val y = m(Offset(0f, fig.floorY + 2.2f)).y
+        val x0 = m(Offset(fig.minX - 12f, 0f)).x
+        val x1 = m(Offset(fig.maxX + 12f, 0f)).x
+        drawOval(
+            Brush.radialGradient(listOf(color.copy(alpha = 0.22f), Color.Transparent), Offset((x0 + x1) / 2f, y), (x1 - x0) / 2f),
+            Offset(x0, y - 3f * s), Size(x1 - x0, 6f * s)
+        )
+        drawLine(
+            Brush.horizontalGradient(0f to Color.Transparent, 0.5f to color.copy(alpha = 0.55f), 1f to Color.Transparent, startX = x0, endX = x1),
+            Offset(x0, y), Offset(x1, y), strokeWidth = 0.7f * s
+        )
+    }
     if (glow) {
-        for ((a, b) in fig.bones) drawLine(color.copy(alpha = 0.22f), m(a), m(b), strokeWidth = bone * 3f, cap = StrokeCap.Round)
-        drawCircle(color.copy(alpha = 0.18f), fig.headR * s * 1.5f, m(fig.head))
+        for ((a, b) in fig.bones) {
+            drawLine(color.copy(alpha = (0.07f * glowGain).coerceAtMost(1f)), m(a), m(b), strokeWidth = bone * 4.6f, cap = StrokeCap.Round)
+            drawLine(color.copy(alpha = (0.16f * glowGain).coerceAtMost(1f)), m(a), m(b), strokeWidth = bone * 2.3f, cap = StrokeCap.Round)
+        }
+        drawCircle(color.copy(alpha = (0.14f * glowGain).coerceAtMost(1f)), fig.headR * s * 1.7f, m(fig.head))
     }
     for ((a, b) in fig.bones) drawLine(color, m(a), m(b), strokeWidth = bone, cap = StrokeCap.Round)
-    drawCircle(color, fig.headR * s, m(fig.head))
-    for (j in fig.joints) {
-        drawCircle(jointColor, 2.7f * s, m(j))
-        drawCircle(color, 1.5f * s, m(j))
+    // A bright core down the middle of each bone makes the line read as lit, not flat.
+    if (glow) for ((a, b) in fig.bones) drawLine(Color.White.copy(alpha = 0.50f), m(a), m(b), strokeWidth = bone * 0.26f, cap = StrokeCap.Round)
+
+    if (measure) fig.angle?.let { (p, v, q) ->
+        val c = m(v)
+        val a0 = Math.toDegrees(kotlin.math.atan2((m(p).y - c.y).toDouble(), (m(p).x - c.x).toDouble())).toFloat()
+        val a1 = Math.toDegrees(kotlin.math.atan2((m(q).y - c.y).toDouble(), (m(q).x - c.x).toDouble())).toFloat()
+        var sweep = a1 - a0
+        if (sweep > 180f) sweep -= 360f
+        if (sweep < -180f) sweep += 360f
+        val r = 10.5f * s
+        drawArc(Brand.Gold.copy(alpha = 0.16f), a0, sweep, true, Offset(c.x - r, c.y - r), Size(2 * r, 2 * r))
+        drawArc(Brand.Gold, a0, sweep, false, Offset(c.x - r, c.y - r), Size(2 * r, 2 * r), style = Stroke(1.1f * s, cap = StrokeCap.Round))
     }
+
+    // Head: lit disc with a highlight toward the light.
+    val head = m(fig.head)
+    val hr = fig.headR * s
+    drawCircle(
+        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.95f), color), Offset(head.x - hr * 0.35f, head.y - hr * 0.4f), hr * 1.5f),
+        hr, head
+    )
+    // Joints: ring markers, like the live overlay's keypoints.
+    for (j in fig.joints) {
+        val c = m(j)
+        drawCircle(JointCore, 2.9f * s, c)
+        drawCircle(jointColor, 2.9f * s, c, style = Stroke(1.0f * s))
+        drawCircle(color, 1.0f * s, c)
+    }
+}
+
+/**
+ * The illustration stage: a deep-navy panel with a pool of teal light and a faint perspective
+ * floor. Every pose figure in the app stands on one of these, so the artwork reads as one set.
+ */
+@Composable
+fun PoseStage(
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(18.dp),
+    /** Where the light pools, as a fraction of the panel. */
+    light: Offset = Offset(0.5f, 0.52f),
+    floor: Boolean = true,
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val c = AppTheme.colors
+    Box(
+        modifier
+            .clip(shape)
+            .background(c.stageBrush)
+            .drawBehind {
+                val centre = Offset(size.width * light.x, size.height * light.y)
+                val r = maxOf(size.width, size.height) * 0.62f
+                drawCircle(Brush.radialGradient(listOf(c.stageGlow.copy(alpha = 0.30f), c.stageGlow.copy(alpha = 0.06f), Color.Transparent), centre, r), r, centre)
+                if (floor) {
+                    // Perspective floor: lines closing up toward the horizon, rays fanning from the vanishing point.
+                    val horizon = size.height * 0.70f
+                    val line = Color.White.copy(alpha = 0.055f)
+                    var gap = size.height * 0.035f
+                    var y = horizon
+                    while (y < size.height) {
+                        drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                        y += gap
+                        gap *= 1.55f
+                    }
+                    val vx = size.width / 2f
+                    for (k in -4..4) {
+                        drawLine(line, Offset(vx + k * size.width * 0.07f, horizon), Offset(vx + k * size.width * 0.34f, size.height), strokeWidth = 1f)
+                    }
+                    drawRect(
+                        Brush.verticalGradient(listOf(c.stageBottom.copy(alpha = 0f), c.stageBottom.copy(alpha = 0.55f)), startY = horizon, endY = size.height),
+                        topLeft = Offset(0f, horizon), size = Size(size.width, size.height - horizon)
+                    )
+                }
+            }
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.03f))), shape),
+        contentAlignment = contentAlignment,
+        content = content
+    )
 }

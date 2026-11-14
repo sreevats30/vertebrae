@@ -1,5 +1,12 @@
 package com.companion.yogawellness.ui.home
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import com.companion.yogawellness.ui.components.PoseStage
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -101,9 +108,9 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun TodayCard(today: DailyCheckInEntity?, activity: ActivitySummary, onCheckIn: () -> Unit) {
-    PanelCard(elevation = 18.dp, spacing = 16.dp) {
+    PanelCard(elevation = 18.dp, spacing = 16.dp, glow = MaterialTheme.colorScheme.primary) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Overline("Today's check-in")
                 Text(
                     if (today == null) "How are you today?" else "Your vitals today",
@@ -169,16 +176,35 @@ private fun WeekStrip(activity: ActivitySummary) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .background(AppTheme.colors.well)
+            .border(1.dp, AppTheme.colors.wellBorder, RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
             .semantics { contentDescription = "Active on $activeCount of the last 7 days" },
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Last 7 days", style = MaterialTheme.typography.labelMedium, color = AppTheme.colors.inkMuted, modifier = Modifier.weight(1f))
-            Text("$activeCount / 7 active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text("$activeCount / 7 active", style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"), color = MaterialTheme.colorScheme.primary)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        val rail = AppTheme.colors.wellBorder
+        val accent = MaterialTheme.colorScheme.primary
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .drawBehind {
+                    // A rail threads the seven days together; active days light it up.
+                    val y = size.height - 14.dp.toPx()
+                    val inset = 14.dp.toPx()
+                    drawLine(rail, Offset(inset, y), Offset(size.width - inset, y), strokeWidth = 2.dp.toPx())
+                    val step = (size.width - 2 * inset) / 6f
+                    activity.last7.forEachIndexed { i, d ->
+                        if (i > 0 && d.active && activity.last7[i - 1].active) {
+                            drawLine(accent.copy(alpha = 0.7f), Offset(inset + step * (i - 1), y), Offset(inset + step * i, y), strokeWidth = 2.dp.toPx())
+                        }
+                    }
+                },
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             activity.last7.forEachIndexed { i, d ->
                 val isToday = i == activity.last7.lastIndex
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -192,12 +218,16 @@ private fun WeekStrip(activity: ActivitySummary) {
                             .size(28.dp)
                             .clip(CircleShape)
                             .background(
-                                if (d.active) Brush.linearGradient(listOf(Brand.Teal500, Brand.Teal600))
+                                if (d.active) Brush.linearGradient(listOf(Brand.Teal400, Brand.Teal600))
                                 else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface))
                             )
                             .border(
                                 if (isToday) 2.dp else 1.dp,
-                                if (isToday) MaterialTheme.colorScheme.primary else AppTheme.colors.cardBorder,
+                                when {
+                                    isToday -> MaterialTheme.colorScheme.primary
+                                    d.active -> Color.White.copy(alpha = 0.28f)
+                                    else -> AppTheme.colors.cardEdge
+                                },
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -220,7 +250,7 @@ internal fun PracticeLaunchCard(profile: ToleranceProfile, onProfile: (Tolerance
     val c = AppTheme.colors
     PanelCard(
         color = c.heroStart,
-        brush = Brush.linearGradient(listOf(c.heroStart, c.heroMid, Brand.Teal700)),
+        brush = c.featureBrush,
         borderColor = null,
         elevation = 16.dp,
         contentPadding = PaddingValues(20.dp),
@@ -239,12 +269,19 @@ internal fun PracticeLaunchCard(profile: ToleranceProfile, onProfile: (Tolerance
             Box(
                 Modifier
                     .padding(start = 8.dp)
-                    .size(104.dp)
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(Brand.Teal400.copy(alpha = 0.28f), Color.Transparent))),
+                    .size(112.dp)
+                    .drawBehind {
+                        // A pool of light with two scanner rings: the figure is being measured.
+                        drawCircle(Brush.radialGradient(listOf(Brand.Teal400.copy(alpha = 0.34f), Color.Transparent)))
+                        drawCircle(Brand.Mint.copy(alpha = 0.16f), size.minDimension * 0.47f, style = Stroke(1.dp.toPx()))
+                        drawCircle(
+                            Brand.Mint.copy(alpha = 0.28f), size.minDimension * 0.385f,
+                            style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 5.dp.toPx())))
+                        )
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                PoseGlyph(Asana.VIRABHADRASANA_II, Modifier.size(96.dp))
+                PoseGlyph(Asana.VIRABHADRASANA_II, Modifier.size(96.dp), measure = true, breathing = true)
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -280,8 +317,8 @@ private fun ToleranceSelector(selected: ToleranceProfile, onSelect: (TolerancePr
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(14.dp))
+            .background(Color.Black.copy(alpha = 0.22f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
             .padding(4.dp)
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -292,8 +329,9 @@ private fun ToleranceSelector(selected: ToleranceProfile, onSelect: (TolerancePr
                 Modifier
                     .weight(1f)
                     .height(40.dp)
+                    .then(if (on) Modifier.shadow(6.dp, RoundedCornerShape(11.dp), spotColor = Color.Black) else Modifier)
                     .clip(RoundedCornerShape(11.dp))
-                    .background(if (on) Color.White else Color.Transparent)
+                    .background(if (on) Brush.verticalGradient(listOf(Color.White, Color(0xFFD9F6F1))) else SolidColor(Color.Transparent))
                     .selectable(selected = on, role = Role.RadioButton, onClick = { onSelect(p) }),
                 contentAlignment = Alignment.Center
             ) {
@@ -315,17 +353,17 @@ private fun ToleranceSelector(selected: ToleranceProfile, onSelect: (TolerancePr
 internal fun WeekMetrics(a: ActivitySummary) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader("This week", overline = "Last 7 days")
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MetricTile(
-                Icons.Rounded.Timer, "Practice", "${a.weekMinutes.roundToInt()} min", Brand.Practice, Modifier.weight(1f),
+                Icons.Rounded.Timer, "Practice", "${a.weekMinutes.roundToInt()} min", Brand.Practice, Modifier.weight(1f).fillMaxHeight(),
                 sub = "${a.weekSessions} session" + if (a.weekSessions == 1) "" else "s"
             )
             MetricTile(
                 Icons.Rounded.Accessibility, "Alignment", a.weekQuality?.let { "${it.roundToInt()}%" } ?: "–",
-                AppTheme.colors.success, Modifier.weight(1f), sub = "avg score"
+                AppTheme.colors.success, Modifier.weight(1f).fillMaxHeight(), sub = "avg score"
             )
             MetricTile(
-                Icons.Rounded.LocalFireDepartment, "Streak", "${a.streakDays}", Brand.Stress, Modifier.weight(1f),
+                Icons.Rounded.LocalFireDepartment, "Streak", "${a.streakDays}", Brand.Stress, Modifier.weight(1f).fillMaxHeight(),
                 sub = if (a.streakDays == 1) "day active" else "days active"
             )
         }
@@ -345,7 +383,7 @@ internal fun ReflectionCard(
 ) {
     val due = Questionnaires.isDue(type, latest?.epochDay, todayEpochDay)
     val accent = if (type == QuestionnaireType.PHQ9) Brand.Mood else AppTheme.colors.info
-    PanelCard(spacing = 14.dp, elevation = 6.dp) {
+    PanelCard(spacing = 14.dp, elevation = 6.dp, glow = accent) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             IconBadge(if (type == QuestionnaireType.PHQ9) Icons.Rounded.Psychology else Icons.Rounded.Spa, accent, size = 46.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -417,7 +455,8 @@ internal fun InsightsTeaser(a: ActivitySummary, onOpen: () -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                    .background(AppTheme.colors.well)
+                    .border(1.dp, AppTheme.colors.wellBorder, RoundedCornerShape(16.dp))
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -468,15 +507,28 @@ private fun Sparklines(mood: List<Int?>, stress: List<Int?>) {
         for ((series, color) in listOf(stress to Brand.Stress, mood to Brand.Mood)) {
             val path = Path()
             var pen = false
+            var runStart = 0
+            // Each unbroken run of days gets a soft fill that fades to the baseline.
+            fun closeRun(endIndex: Int) {
+                if (endIndex - runStart < 1) return
+                val area = Path()
+                area.moveTo(x(runStart), size.height)
+                for (k in runStart..endIndex) area.lineTo(x(k), y(series[k]!!))
+                area.lineTo(x(endIndex), size.height)
+                area.close()
+                drawPath(area, Brush.verticalGradient(listOf(color.copy(alpha = 0.22f), Color.Transparent)))
+            }
             series.forEachIndexed { i, v ->
-                if (v == null) { pen = false; return@forEachIndexed }
-                if (pen) path.lineTo(x(i), y(v)) else path.moveTo(x(i), y(v))
+                if (v == null) { if (pen) closeRun(i - 1); pen = false; return@forEachIndexed }
+                if (pen) path.lineTo(x(i), y(v)) else { path.moveTo(x(i), y(v)); runStart = i }
                 pen = true
             }
+            if (pen) closeRun(series.lastIndex)
             drawPath(path, color, style = Stroke(2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             val last = series.indexOfLast { it != null }
             if (last >= 0) {
                 val p = Offset(x(last), y(series[last]!!))
+                drawCircle(color.copy(alpha = 0.22f), 8.dp.toPx(), p)
                 drawCircle(surface, 5.dp.toPx(), p)
                 drawCircle(color, 3.5.dp.toPx(), p)
             }
@@ -502,20 +554,14 @@ internal fun PoseCarousel(onPose: (Asana) -> Unit = {}) {
 private fun PoseCard(asana: Asana, onClick: () -> Unit) {
     val c = AppTheme.colors
     PanelCard(Modifier.width(184.dp), onClick = onClick, contentPadding = PaddingValues(10.dp), spacing = 10.dp, elevation = 6.dp) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(128.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Brush.linearGradient(listOf(c.heroStart, c.heroMid, Brand.Teal700))),
-            contentAlignment = Alignment.Center
-        ) {
-            PoseGlyph(asana, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp).size(94.dp))
+        PoseStage(Modifier.fillMaxWidth().height(136.dp), light = Offset(0.5f, 0.6f)) {
+            PoseGlyph(asana, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp).size(104.dp), measure = true)
             Pill(
                 if (asana.isScored) "Scored" else "Calibration",
                 Modifier.align(Alignment.TopStart).padding(8.dp),
                 color = Color.White,
-                container = Color.White.copy(alpha = 0.14f)
+                container = Color.White.copy(alpha = 0.12f),
+                border = Color.White.copy(alpha = 0.16f)
             )
         }
         Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -571,7 +617,7 @@ internal fun HistoryCard(onOpen: () -> Unit) {
 
 @Composable
 internal fun PrivacyFooter(onSettings: () -> Unit) {
-    PanelCard(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), elevation = 0.dp, spacing = 12.dp) {
+    PanelCard(color = AppTheme.colors.well, borderColor = AppTheme.colors.wellBorder, elevation = 0.dp, spacing = 12.dp) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBadge(Icons.Rounded.Shield, MaterialTheme.colorScheme.primary, size = 40.dp)
             Column(Modifier.weight(1f)) {

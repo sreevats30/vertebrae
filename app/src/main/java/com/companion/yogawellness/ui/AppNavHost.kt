@@ -1,5 +1,9 @@
 package com.companion.yogawellness.ui
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -100,13 +104,24 @@ private fun codexIdFor(asana: Asana): String? =
 
 @Composable
 fun AppBottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
+    val c = AppTheme.colors
+    val accent = MaterialTheme.colorScheme.primary
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = c.cardBottom,
         tonalElevation = 0.dp,
-        modifier = Modifier.shadow(
-            16.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            ambientColor = Color(0x14071A2F), spotColor = Color(0x26071A2F)
-        )
+        modifier = Modifier
+            .shadow(
+                16.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                ambientColor = c.shadow.copy(alpha = 0.10f), spotColor = c.shadow.copy(alpha = 0.30f)
+            )
+            .drawWithContent {
+                drawContent()
+                // A hairline of light along the top edge, brightest in the middle.
+                drawRect(
+                    Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = 0.45f), Color.Transparent)),
+                    size = Size(size.width, 1.dp.toPx())
+                )
+            }
     ) {
         TopLevelDestination.entries.forEach { d ->
             NavigationBarItem(
@@ -117,7 +132,7 @@ fun AppBottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     selectedTextColor = MaterialTheme.colorScheme.primary,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    indicatorColor = accent.copy(alpha = if (c.isDark) 0.20f else 0.14f),
                     unselectedIconColor = AppTheme.colors.inkMuted,
                     unselectedTextColor = AppTheme.colors.inkMuted
                 )
@@ -125,6 +140,9 @@ fun AppBottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
         }
     }
 }
+
+private fun androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.isTabSwitch(): Boolean =
+    initialState.destination.route in TopLevelDestination.routes && targetState.destination.route in TopLevelDestination.routes
 
 @Composable
 fun AppNavHost(nav: NavHostController = rememberNavController()) {
@@ -146,8 +164,15 @@ fun AppNavHost(nav: NavHostController = rememberNavController()) {
             modifier = Modifier
                 .padding(inner)
                 .consumeWindowInsets(inner),
-            enterTransition = { fadeIn(tween(320)) + slideInHorizontally(tween(360)) { it / 6 } },
-            exitTransition = { fadeOut(tween(220)) + slideOutHorizontally(tween(360)) { -it / 10 } },
+            // Tabs cross-fade in place (they are siblings); everything else slides, since it goes deeper.
+            enterTransition = {
+                if (isTabSwitch()) fadeIn(tween(260, delayMillis = 60)) + scaleIn(tween(320), initialScale = 0.985f)
+                else fadeIn(tween(320)) + slideInHorizontally(tween(360)) { it / 6 }
+            },
+            exitTransition = {
+                if (isTabSwitch()) fadeOut(tween(140))
+                else fadeOut(tween(220)) + slideOutHorizontally(tween(360)) { -it / 10 }
+            },
             popEnterTransition = { fadeIn(tween(320)) + slideInHorizontally(tween(360)) { -it / 10 } },
             popExitTransition = { fadeOut(tween(220)) + slideOutHorizontally(tween(360)) { it / 6 } }
         ) {

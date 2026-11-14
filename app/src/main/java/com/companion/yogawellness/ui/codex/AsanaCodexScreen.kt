@@ -1,5 +1,7 @@
 package com.companion.yogawellness.ui.codex
 
+import com.companion.yogawellness.ui.components.cardSurface
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -203,15 +205,18 @@ private fun FilterPill(text: String, selected: Boolean, live: Boolean = false, o
     Row(
         Modifier
             .clip(CircleShape)
-            .background(if (selected) accent else MaterialTheme.colorScheme.surface)
-            .border(1.dp, if (selected) accent else AppTheme.colors.cardBorder, CircleShape)
+            .background(
+                if (selected) Brush.verticalGradient(listOf(accent, accent.copy(alpha = 0.86f))) else AppTheme.colors.cardBrush
+            )
+            .border(1.dp, if (selected) Color.White.copy(alpha = 0.30f) else AppTheme.colors.cardEdge, CircleShape)
             .selectable(selected = selected, role = Role.Tab, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        if (live) Icon(Icons.Rounded.Videocam, contentDescription = null, tint = if (selected) Color.White else accent, modifier = Modifier.size(16.dp))
-        Text(text, style = MaterialTheme.typography.labelLarge, color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface)
+        val on = if (live) Color.White else MaterialTheme.colorScheme.onPrimary
+        if (live) Icon(Icons.Rounded.Videocam, contentDescription = null, tint = if (selected) on else accent, modifier = Modifier.size(16.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, color = if (selected) on else MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -221,17 +226,14 @@ private fun CodexRow(item: AsanaCodexItem, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .shadow(6.dp, shape, ambientColor = Color(0x10071A2F), spotColor = Color(0x22071A2F))
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, AppTheme.colors.cardBorder, shape)
+            .cardSurface(shape)
             .clickable(role = Role.Button, onClickLabel = "Open ${item.englishName}", onClick = onClick)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Box {
-            SkeletonThumbnail(item, item.defaultView, Modifier.width(68.dp))
+            SkeletonThumbnail(item, item.defaultView, Modifier.width(72.dp))
             if (item.isLive) {
                 Box(
                     Modifier
@@ -239,7 +241,8 @@ private fun CodexRow(item: AsanaCodexItem, onClick: () -> Unit) {
                         .padding(4.dp)
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(ScoreColors.Green),
+                        .background(ScoreColors.Green)
+                        .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Rounded.Videocam, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))

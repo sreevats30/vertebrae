@@ -1,5 +1,8 @@
 package com.companion.yogawellness.ui.dashboard
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.border
 import android.content.ActivityNotFoundException
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -216,27 +219,27 @@ private fun StatTiles(d: DashboardData) {
     val q = h.meanQuality
     val p = h.previousWeekQuality
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MetricTile(
-                Icons.Rounded.Timer, "Practice this week", "${f0(h.practiceMinutes)} min", Brand.Practice, Modifier.weight(1f),
+                Icons.Rounded.Timer, "Practice this week", "${f0(h.practiceMinutes)} min", Brand.Practice, Modifier.weight(1f).fillMaxHeight(),
                 sub = "${h.sessions} sessions"
             )
             MetricTile(
-                Icons.Rounded.Accessibility, "Avg alignment", q?.let { "${f0(it)}%" } ?: "–", AppTheme.colors.success, Modifier.weight(1f),
+                Icons.Rounded.Accessibility, "Avg alignment", q?.let { "${f0(it)}%" } ?: "–", AppTheme.colors.success, Modifier.weight(1f).fillMaxHeight(),
                 sub = if (q != null && p != null) "vs last week" else null,
                 delta = if (q != null && p != null) "${if (q >= p) "+" else ""}${f0(q - p)}" else null,
                 deltaPositive = if (q != null && p != null) q >= p else null
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MetricTile(
-                Icons.Rounded.EventAvailable, "Check-ins", "${h.checkInDays} / 7", Brand.Mood, Modifier.weight(1f),
+                Icons.Rounded.EventAvailable, "Check-ins", "${h.checkInDays} / 7", Brand.Mood, Modifier.weight(1f).fillMaxHeight(),
                 sub = "days logged this week"
             )
             val t = d.tension
             MetricTile(
                 Icons.Rounded.SelfImprovement, "Body tension", t?.let { "${f1(it.meanBefore)} → ${f1(it.meanAfter)}" } ?: "–",
-                Brand.Stress, Modifier.weight(1f), sub = t?.let { "before → after practice" }
+                Brand.Stress, Modifier.weight(1f).fillMaxHeight(), sub = t?.let { "before → after practice" }
             )
         }
     }
@@ -246,7 +249,7 @@ private fun StatTiles(d: DashboardData) {
 private fun TrendCard(weeks: List<WeeklyRow>) {
     val colors = if (isSystemInDarkTheme()) ChartColors.Dark else ChartColors.Light
     val density = LocalDensity.current
-    val renderer = remember(colors, density) { TrendChartRenderer(colors, density.density, density.density * density.fontScale) }
+    val renderer = remember(colors, density) { TrendChartRenderer(colors, density.density, density.density * density.fontScale, luminous = true) }
     val labels = weeks.map { LocalDate.ofEpochDay(it.weekStartEpochDay).format(SHORT) }
     var selected by remember(weeks) { mutableStateOf<Int?>(null) }
     var showTable by remember { mutableStateOf(false) }
@@ -280,7 +283,8 @@ private fun TrendCard(weeks: List<WeeklyRow>) {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                .background(AppTheme.colors.well)
+                .border(1.dp, AppTheme.colors.wellBorder, RoundedCornerShape(14.dp))
                 .padding(12.dp)
         ) {
             if (sel != null && sel < weeks.size) {
@@ -365,7 +369,8 @@ private fun SymmetryCard(d: DashboardData) {
 private fun SymmetryRowView(s: SymmetryRow, maxHold: Double) {
     val left = Brand.Practice
     val right = Brand.Mood
-    val track = MaterialTheme.colorScheme.surfaceVariant
+    val track = AppTheme.colors.well
+    val centre = AppTheme.colors.cardEdge
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -395,6 +400,8 @@ private fun SymmetryRowView(s: SymmetryRow, maxHold: Double) {
             val rw = ((mid - gap) * (s.rightHoldSec / maxHold)).toFloat()
             if (lw > 0) drawRoundRect(Brush.horizontalGradient(listOf(left.copy(alpha = 0.55f), left), startX = mid - gap - lw, endX = mid - gap), Offset(mid - gap - lw, 0f), Size(lw, size.height), r)
             if (rw > 0) drawRoundRect(Brush.horizontalGradient(listOf(right, right.copy(alpha = 0.55f)), startX = mid + gap, endX = mid + gap + rw), Offset(mid + gap, 0f), Size(rw, size.height), r)
+            // Centre line: the body's midline the two sides are measured from.
+            drawLine(centre, Offset(mid, -3.dp.toPx()), Offset(mid, size.height + 3.dp.toPx()), strokeWidth = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
         }
         Text(
             "Mean best hold: left ${f1(s.leftHoldSec)} s · right ${f1(s.rightHoldSec)} s" +
@@ -414,7 +421,7 @@ private fun InsightCardView(card: InsightCard) {
         r.pValue < RankStatsEngine.SIGNIFICANCE -> "Pattern found" to AppTheme.colors.success
         else -> "No clear pattern" to AppTheme.colors.info
     }
-    PanelCard(spacing = 10.dp, elevation = 6.dp) {
+    PanelCard(spacing = 10.dp, elevation = 6.dp, glow = if (label == "Pattern found") color else null) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             IconBadge(Icons.Rounded.Lightbulb, Brand.Gold, size = 38.dp)
             Column(Modifier.weight(1f)) {
@@ -437,7 +444,8 @@ private fun StatChip(symbol: String, value: String) {
     Row(
         Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(AppTheme.colors.well)
+            .border(1.dp, AppTheme.colors.wellBorder, RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
@@ -475,7 +483,8 @@ private fun ReflectionCard(d: DashboardData) {
                                 Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(accent.copy(alpha = 0.08f))
+                                    .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.16f), accent.copy(alpha = 0.05f))))
+                                    .border(1.dp, accent.copy(alpha = 0.22f), RoundedCornerShape(14.dp))
                                     .padding(vertical = 10.dp, horizontal = 6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {

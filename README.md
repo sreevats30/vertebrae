@@ -559,8 +559,15 @@ ECG `PulseLine`. It follows the system light/dark setting. Tokens live in `ui/th
 shared components in `ui/components/Clinical.kt` and `ui/components/Artwork.kt` — see
 [Design System & UI Architecture](#-design-system--ui-architecture) below.
 
-- **Screenshots**: `./gradlew :app:testDebugUnitTest --tests '*ScreenRenderTest*'` renders the main screens to
-  `app/build/screenshots/`.
+- **Depth and light**: cards are tonal surfaces with a lit top edge (`PanelCard`, `Modifier.cardSurface`); important
+  cards carry a quiet corner glow in their accent colour, and inset "wells" hold secondary content.
+- **Signature illustrations**: every pose figure is drawn the same way — luminous bones with a bright core, ring-shaped
+  joint markers, a gold arc at the joint the pose is about — and stands on a `PoseStage` (deep-navy panel, pool of
+  teal light, perspective floor). The Learn demos and the live camera overlay share the same keypoint style.
+- **Motion**: press-scale on cards and buttons (`Modifier.pressScale`), animated rings and progress bars, a slow
+  breathing glow on one hero figure per screen, cross-fades between tabs and slides when going deeper.
+- **Screenshots**: `./gradlew :app:testDebugUnitTest --tests '*ScreenRenderTest*' --tests '*DarkThemeRenderTest*'`
+  renders the main screens to `app/build/screenshots/` (dark-theme renders in `app/build/screenshots/dark/`).
 
 ---
 
