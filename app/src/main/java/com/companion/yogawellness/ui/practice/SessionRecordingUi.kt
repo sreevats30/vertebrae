@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,8 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -35,8 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.companion.yogawellness.data.SessionAutoRecorder
 import com.companion.yogawellness.data.SessionReceipt
-import com.companion.yogawellness.ui.theme.AppTheme
-import com.companion.yogawellness.ui.theme.ScoreColors
+import com.companion.yogawellness.ui.theme.Brand
 import java.util.Locale
 
 /** "Remove animations" accessibility setting. */
@@ -69,8 +72,9 @@ fun RecBadge(rec: SessionAutoRecorder.Rec, modifier: Modifier = Modifier, compac
         ).value
     }
     Surface(
-        color = Color.White.copy(alpha = 0.06f),
-        shape = RoundedCornerShape(8.dp),
+        color = Color(0xCC07111F),
+        shape = CircleShape,
+        border = BorderStroke(1.dp, Color(0xFFE5484D).copy(alpha = 0.45f)),
         modifier = modifier.clearAndSetSemantics { contentDescription = recContentDescription(rec) }
     ) {
         Row(
@@ -82,12 +86,12 @@ fun RecBadge(rec: SessionAutoRecorder.Rec, modifier: Modifier = Modifier, compac
                 Modifier
                     .size(9.dp)
                     .alpha(dotAlpha)
-                    .background(ScoreColors.Red, CircleShape)
+                    .background(Color(0xFFE5484D), CircleShape)
             )
             Text(
                 if (compact) recBadgeText(rec).removeSuffix(" saved") else recBadgeText(rec),
-                color = Color(0xFFEEECE7),
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1
             )
@@ -103,23 +107,39 @@ fun receiptLine(p: com.companion.yogawellness.data.ReceiptPose): String {
 
 @Composable
 fun SessionReceiptDialog(receipt: SessionReceipt, onViewHistory: () -> Unit, onKeepPractising: () -> Unit) {
-    val c = AppTheme.colors
     AlertDialog(
         onDismissRequest = onKeepPractising,
-        title = { Text("Session saved") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                receipt.poses.forEach { Text(receiptLine(it), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary) }
-                HorizontalDivider(color = c.line)
-                Text(
-                    String.format(Locale.US, "Total %.1f s", receipt.totalSec) +
-                        (receipt.meanScore?.let { " · mean alignment ${it.toInt()}%" } ?: ""),
-                    style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
-                    color = c.text
-                )
+        icon = {
+            Box(
+                Modifier
+                    .size(56.dp)
+                    .background(Brush.linearGradient(listOf(Brand.Mint, Brand.Teal500)), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Brand.Navy900, modifier = Modifier.size(30.dp))
             }
         },
-        confirmButton = { TextButton(onClick = onViewHistory) { Text("View History", color = c.accent) } },
-        dismissButton = { TextButton(onClick = onKeepPractising) { Text("Keep practising", color = c.text) } }
+        title = { Text("Session saved", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                receipt.poses.forEach {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.padding(top = 7.dp).size(6.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                        Text(receiptLine(it), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(14.dp)) {
+                    Text(
+                        String.format(Locale.US, "Total %.1f s", receipt.totalSec) +
+                            (receipt.meanScore?.let { " · mean alignment ${it.toInt()}%" } ?: ""),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onViewHistory) { Text("View History", fontWeight = FontWeight.SemiBold) } },
+        dismissButton = { TextButton(onClick = onKeepPractising) { Text("Keep practising") } }
     )
 }
