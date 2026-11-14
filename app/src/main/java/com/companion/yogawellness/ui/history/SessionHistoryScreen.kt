@@ -204,39 +204,6 @@ private fun DayHeader(text: String) {
 @Composable
 private fun SessionRow(item: SessionWithPoses, expanded: Boolean, onToggle: () -> Unit, onDelete: (() -> Unit)?) {
     val s = item.session
-<<<<<<< HEAD
-    val when_ = formatSessionTime(s.startedAtMs)
-    val accent = s.meanScore?.let { scoreColor(it) } ?: MaterialTheme.colorScheme.primary
-    PanelCard(contentPadding = PaddingValues(0.dp), spacing = 0.dp, elevation = 6.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                Modifier
-                    .weight(1f)
-                    .clickable(role = Role.Button, onClickLabel = if (expanded) "Collapse" else "Expand", onClick = onToggle)
-                    .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
-                    .padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DateBadge(s.startedAtMs, accent)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(when_, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        InfoChip(HistoryAggregator.formatDuration(s.activeSec), icon = Icons.Rounded.Timer)
-                        s.meanScore?.let { InfoChip("${it.toInt()}% align", dot = scoreColor(it)) }
-                        HistoryAggregator.stability(item.poses)?.let { InfoChip("${it.toInt()}% stab") }
-                    }
-                    Text(
-                        "${item.poses.size} ${if (item.poses.size == 1) "pose" else "poses"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppTheme.colors.inkMuted
-                    )
-                }
-                Icon(
-                    if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                    contentDescription = null,
-                    tint = AppTheme.colors.inkMuted
-=======
     val c = AppTheme.colors
     val manual = s.source == PracticeSessionEntity.SOURCE_MANUAL
     val whenText = formatSessionTime(s.startedAtMs)
@@ -255,7 +222,6 @@ private fun SessionRow(item: SessionWithPoses, expanded: Boolean, onToggle: () -
                     Instant.ofEpochMilli(s.startedAtMs).atZone(ZoneId.systemDefault()).format(TIME),
                     style = MaterialTheme.typography.titleMedium,
                     color = c.text
->>>>>>> 7ba278c7ed9d8e22a30181b25f764a38eb873e70
                 )
                 // Separate texts, so each value is its own readable unit.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -286,16 +252,11 @@ private fun SessionRow(item: SessionWithPoses, expanded: Boolean, onToggle: () -
             )
         }
         if (expanded) {
-<<<<<<< HEAD
-            Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                HorizontalDivider(color = AppTheme.colors.hairline)
-=======
             Column(
                 Modifier.fillMaxWidth().padding(start = Space.Gutter, end = Space.Gutter, bottom = Space.L),
                 verticalArrangement = Arrangement.spacedBy(Space.L)
             ) {
                 if (manual) Text("Logged by hand — no pose data or score.", style = MaterialTheme.typography.bodySmall, color = c.textTertiary)
->>>>>>> 7ba278c7ed9d8e22a30181b25f764a38eb873e70
                 item.poses.forEach { PoseRow(it) }
                 if (onDelete != null) {
                     TextAction(
